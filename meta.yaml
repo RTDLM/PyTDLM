@@ -1,0 +1,44 @@
+{% set name = "TDLM" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ./
+
+build:
+  noarch: python
+  number: 0
+  script: {{ PYTHON }} -m pip install . -vv
+
+requirements:
+  host:
+    - python >=3.8
+    - pip
+    - setuptools
+    - wheel
+  run:
+    - python >=3.8
+    - numpy >=1.20.0
+    - pandas >=1.3.0
+    - tqdm >=4.60.0
+
+test:
+  imports:
+    - TDLM
+    - TDLM.tdlm
+  commands:
+    - python -c "from TDLM import tdlm; print('TDLM imported successfully')"
+
+about:
+  home: https://github.com/PyTDLM/TDLM
+  license: GPL-3.0-only
+  license_family: GPL3
+  license_file: LICENSE
+  summary: Systematic comparison of trip distribution laws and models
+  description: |
+    The main purpose of the TDLM package is to provide a rigorous framework for fairly comparing trip distribution laws and models, as described in Lenormand et al. (2016). This general framework relies on a two-step approach to generate mobility flows, separating the trip distribution law, gravity or intervening opportunities, from the modeling approach used to derive flows from this law.
+  doc_url: https://pytdlm.github.io
+  dev_url: https://github.com/PyTDLM/TDLM
