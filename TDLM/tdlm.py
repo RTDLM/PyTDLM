@@ -26,6 +26,102 @@ class TDLMError(Exception):
     pass
 
 
+def compute_opportunity(
+    mass_destination: np.ndarray,
+    distance: np.ndarray,
+    processes: Optional[int] = None
+) -> np.ndarray:
+    """
+    Compute the opportunity matrix Sij: Number of opportunities located in a circle 
+    of radius dij centered in i (excluding the source and the destination).
+    
+    Parameters
+    ----------
+    mass_destination : np.ndarray
+        Number of inhabitants at destination (mj)
+    distance : np.ndarray
+        Distance matrix (n x n)
+    processes : int, optional
+        Number of processes for parallel computation. Default: CPU count - 2
+        
+    Returns
+    -------
+    np.ndarray
+        Opportunity matrix Sij of shape (n, n)
+    """
+    n = len(mass_destination)
+    
+    # Validate inputs
+    if distance.shape != (n, n):
+        raise TDLMError(f"distance matrix must be {n}x{n}")
+    
+    print(f"Computing opportunity matrix for {n} regions...")
+    
+    # Setup multiprocessing
+    num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
+    print(f'Using {num_processes} parallel processes')
+    
+    # Prepare arguments for parallel processing
+    args_list = [(i, distance, mass_destination, n) for i in range(n)]
+    
+    # Use multiprocessing to compute S matrix rows in parallel
+    with mp.Pool(processes=num_processes) as pool:
+        results = list(tqdm(pool.imap(_process_opportunity_row, args_list), 
+                           total=n, desc="Computing opportunities"))
+    
+    # Collect results into S matrix
+    S = np.zeros((n, n))
+    for i, row_S in results:
+        S[i, :] = row_S
+    
+    print("Done\n")
+    return S
+
+
+def _process_opportunity_row(args):
+    """Process a single row of the opportunity matrix S with complete vectorization."""
+    i, dij, mj, n = args
+    
+    # Initialize row
+    row_S = np.zeros(n)
+    
+    # Get distances from i to all regions
+    distances_i = dij[i, :]
+    
+    # Create 2D arrays for the j and l dimensions (n×n)
+    j_indices = np.arange(n).reshape(n, 1)  # Column vector
+    l_indices = np.arange(n).reshape(1, n)  # Row vector
+    
+    # This creates a matrix of distances from i to l
+    distances_il = np.broadcast_to(distances_i, (n, n))
+    
+    # This creates a column vector of distances from i to j
+    distances_ij = distances_i.reshape(n, 1)
+    
+    # Create masks for all combinations of j and l at once
+    # distance condition: dist(i,l) <= dist(i,j)
+    distance_mask = distances_il <= distances_ij
+    
+    # l != i mask
+    l_not_i_mask = l_indices != i
+    
+    # l != j mask
+    l_not_j_mask = l_indices != j_indices
+    
+    # Combine all masks
+    combined_mask = distance_mask & l_not_i_mask & l_not_j_mask
+    
+    # Apply the mask to mj and sum for each j
+    # Need to reshape mj for broadcasting
+    mj_expanded = mj.reshape(1, n)
+    row_S = np.sum(combined_mask * mj_expanded, axis=1)
+    
+    # Set diagonal to 0 (where i==j)
+    row_S[i] = 0
+    
+    return i, row_S
+
+
 def run_law_model(
     law: str,
     mass_origin: np.ndarray,
@@ -56,7 +152,8 @@ def run_law_model(
     distance : np.ndarray
         Distance matrix (n x n)
     opportunity : np.ndarray, optional
-        Matrix of opportunities (n x n). Required for "Rad", "RadExt", "Schneider"
+        Matrix of opportunities (n x n). Required for "Rad", "RadExt", "Schneider".
+        If not provided and required, will be computed automatically.
     exponent : float or np.ndarray
         Exponent parameter(s) for the distribution law
     return_proba : bool, default False
@@ -80,6 +177,12 @@ def run_law_model(
         If single exponent: np.ndarray of shape (repli, n, n)
         If multiple exponents: Dict with exponents as keys, arrays as values
     """
+    
+    # Check if opportunity matrix is needed and compute if not provided
+    laws_requiring_opportunity = ["Rad", "RadExt", "Schneider"]
+    if law in laws_requiring_opportunity and opportunity is None:
+        print(f"Law '{law}' requires opportunity matrix. Computing automatically...")
+        opportunity = compute_opportunity(mass_destination, distance, processes)
     
     # Input validation
     _validate_inputs(law, model, mass_origin, mass_destination, distance, 
@@ -119,8 +222,8 @@ def run_law_model(
                 output[beta] = results[i]['simulations']
                 
     else:
-        output = {}
         # Sequential processing
+        output = {}
         if single_exponent:
             beta = exponents[0]
             print(f'Simulating matrix for {law} β = {beta:.2g} with {model}')
