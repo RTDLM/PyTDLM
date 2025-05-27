@@ -19,7 +19,7 @@ def main():
     # Sample data - replace with your actual data
     print("Setting up example data...")
     
-    #Inputs (mi, mj, Oi and Dj), dij and sij
+    #Inputs (mi, mj, Oi and Dj)
     inputs = pd.read_csv(data_path + "Inputs.csv", sep=";")
 
     # Origin and destination masses (population, employment, etc.)
@@ -68,7 +68,7 @@ def main():
         model=model,
         out_trips=Oi,
         in_trips=Dj,
-        repli=10,               # Number of replications
+        repli=5,               # Number of replications
         random_seed=42          # For reproducibility
     )
     
@@ -129,7 +129,7 @@ def main():
             optimal_idx = np.argmin(means)
         
         axes[i].axvline(exponent[optimal_idx], color='red', linestyle='--', 
-                       alpha=0.7, label=f'Optimal: {exponent[optimal_idx]:.2f}')
+                       alpha=0.7, label=f'Optimal: {exponent[optimal_idx]:.3g}')
         axes[i].legend()
     
     fig.suptitle(f'{law} Model with {model} Constraints', fontsize=16)
@@ -144,7 +144,7 @@ def main():
     print("\nResults Summary:")
     print(f"Law: {law}")
     print(f"Model: {model}")
-    print(f"Best exponent (highest CPC): {best_exponent:.2f}")
+    print(f"Best exponent (highest CPC): {best_exponent:.3g}")
     print(f"Best CPC value: {cpc_means[best_exp_idx]:.3f}")
     
     # Show sample simulation with best exponent
@@ -158,7 +158,7 @@ def main():
         model=model,
         out_trips=Oi,
         in_trips=Dj,
-        repli=5,
+        repli=1,
         return_proba=True,
         random_seed=42
     )
