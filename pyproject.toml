@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "TDLM"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Systematic comparison of trip distribution laws and models"
 readme = "README.md"
 license = {text = "GPL-3.0"}
@@ -51,3 +51,6 @@ Documentation = "https://rtdlm.github.io/PyTDLM/"
 
 [tool.setuptools.packages.find]
 include = ["TDLM*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "TDLM.__version__"}

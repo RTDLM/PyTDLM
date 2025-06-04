@@ -1,0 +1,120 @@
+name: Publish Package
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish-pypi:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install build twine
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check package
+      run: twine check dist/*
+    
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: twine upload dist/*
+
+  prepare-conda-forge-info:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    needs: publish-pypi
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: '3.9'
+        channels: conda-forge,defaults
+    
+    - name: Install grayskull (conda recipe generator)
+      shell: bash -l {0}
+      run: |
+        conda install -c conda-forge grayskull -y
+    
+    - name: Generate conda-forge recipe with grayskull
+      shell: bash -l {0}
+      run: |
+        # Wait a bit for PyPI to be available
+        sleep 60
+        grayskull pypi TDLM
+        
+    - name: Upload generated recipe
+      uses: actions/upload-artifact@v3
+      with:
+        name: conda-forge-recipe
+        path: TDLM/
+    
+    - name: Comment on release with conda-forge instructions
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Try to read the generated meta.yaml for reference
+          let recipeContent = '';
+          try {
+            recipeContent = fs.readFileSync('TDLM/meta.yaml', 'utf8');
+          } catch (error) {
+            recipeContent = 'Recipe generation failed - use manual meta.yaml';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.payload.release.id,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🎉 Release ${context.payload.release.tag_name} published!
+            
+            ## Distribution Status
+            
+            ✅ **PyPI:** Available at https://pypi.org/project/TDLM/${context.payload.release.tag_name}/
+            
+            ## Conda-forge Next Steps
+            
+            ### If this is your FIRST conda-forge submission:
+            1. Fork https://github.com/conda-forge/staged-recipes
+            2. Create \`recipes/tdlm/meta.yaml\` using the generated recipe (see artifacts)
+            3. Submit PR to staged-recipes
+            4. After merge, conda-forge will create your feedstock
+            
+            ### If feedstock already exists:
+            The conda-forge bot should automatically detect this PyPI release and create an update PR to your feedstock.
+            
+            **Generated conda recipe is available in the workflow artifacts above.**
+            
+            **Feedstock location (after initial submission):** https://github.com/conda-forge/tdlm-feedstock`
+          })
+    
+    - name: Check if conda-forge feedstock exists
+      continue-on-error: true
+      run: |
+        # This will help identify if the feedstock already exists
+        curl -f -s https://api.github.com/repos/conda-forge/tdlm-feedstock > /dev/null
+        if [ $? -eq 0 ]; then
+          echo "Feedstock exists - conda-forge bot should auto-update"
+        else
+          echo "Feedstock does not exist - manual submission to staged-recipes needed"
+        fi
