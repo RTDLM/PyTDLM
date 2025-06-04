@@ -75,11 +75,14 @@ results = tdlm.run_law_model(
 
 # Calculate goodness-of-fit
 gof_results = tdlm.gof(sim=results, obs=Tij_observed, distance=dij)
+
+# Print results for a given exponent
+print(gof_results[0.1].to_markdown(index=False))
 ```
 
 ## Documentation
 
-For detailed documentation and examples, visit: [https://pytdlm.github.io/](https://pytdlm.github.io/)
+For detailed documentation and examples, visit: [https://rtdlm.github.io/PyTDLM/](https://rtdlm.github.io/PyTDLM/)
 
 ## License
 
@@ -94,6 +97,6 @@ If you use this library in your research, please cite:
   title={TDLM: Trip Distribution Law Models},
   author={Lenormand, Maxime},
   year={2024},
-  url={https://github.com/PyTDLM/TDLM}
+  url={https://github.com/RTDLM/PyTDLM}
 }
 ```
