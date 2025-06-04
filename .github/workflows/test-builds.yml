@@ -50,7 +50,7 @@ jobs:
         pytest tests/ -v
     
     - name: Upload pip artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
       with:
         name: pip-dist
@@ -112,7 +112,7 @@ jobs:
         pytest tests/ -v
     
     - name: Upload conda artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
       with:
         name: conda-dist

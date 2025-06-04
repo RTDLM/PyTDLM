@@ -11,7 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from TDLM import tdlm
 
-data_path = os.getcwd() + os.sep + "docs" + os.sep + "examples" + os.sep + "data_US" + os.sep
+data_path = os.getcwd() + os.sep + "data_US" + os.sep
 
 def main():
     """Main example function"""
