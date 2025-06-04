@@ -2,7 +2,7 @@
 TDLM: Trip Distribution Law Models Library
 
 Author: Maxime Lenormand (2015)
-Converted to library format with enhanced parallel processing support
+Converted to Python with enhanced parallel processing support
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License version 3.
