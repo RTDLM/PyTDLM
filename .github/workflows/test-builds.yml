@@ -34,11 +34,11 @@ jobs:
       run: python -m build
     
     - name: Check package with twine
-      shell: bash # Requiered for Windows, otherwise glob pattern will fail
+      shell: bash # Required for Windows, otherwise glob pattern will fail
       run: twine check dist/*
     
     - name: Install package from wheel
-      shell: bash # Requiered for Windows, otherwise glob pattern will fail
+      shell: bash # Required for Windows, otherwise glob pattern will fail
       run: pip install dist/*.whl
     
     - name: Test import
@@ -76,6 +76,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         channels: conda-forge,defaults
         channel-priority: strict
+        miniconda-version: "latest"
     
     - name: Install conda-build
       shell: bash -l {0}
@@ -100,7 +101,7 @@ jobs:
       run: |
         conda activate test-env
         python -c "from TDLM import tdlm; print('TDLM imported successfully')"
-        python -c "import TDLM; print('TDLM conda package working')"
+        python -c "import TDLM; print(f'TDLM version: {TDLM.__version__}')"
     
     - name: Run tests in conda environment
       shell: bash -l {0}
@@ -128,6 +129,7 @@ jobs:
         auto-update-conda: true
         python-version: 3.9
         channels: conda-forge,defaults
+        miniconda-version: "latest"
     
     - name: Create environment from environment.yml
       shell: bash -l {0}
@@ -145,6 +147,7 @@ jobs:
         echo "Installing package: $PACKAGE_PATH"
         conda install $PACKAGE_PATH -y
         python -c "from TDLM import tdlm; print('TDLM imported successfully')"
+        python -c "import TDLM; print(f'TDLM version: {TDLM.__version__}')"
     
     - name: Run tests in conda environment
       shell: bash -l {0}
