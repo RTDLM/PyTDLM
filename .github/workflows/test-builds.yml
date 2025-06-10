@@ -80,8 +80,8 @@ jobs:
     - name: Install conda-build
       shell: bash -l {0}
       run: |
-        conda install conda-build conda-verify anaconda-client
-    
+        conda install conda-build 
+        
     - name: Build conda package
       shell: bash -l {0}
       run: |
@@ -93,7 +93,7 @@ jobs:
         # Create a fresh environment and install the package
         conda create -n test-env python=${{ matrix.python-version }} -y
         conda activate test-env
-        conda install --use-local tdlm -y
+        conda install -c ./conda-dist tdlm -y
     
     - name: Test conda package import
       shell: bash -l {0}
