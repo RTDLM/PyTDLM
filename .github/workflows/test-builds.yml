@@ -34,9 +34,11 @@ jobs:
       run: python -m build
     
     - name: Check package with twine
+      shell: bash # Requiered for Windows, otherwise glob pattern will fail
       run: twine check dist/*
     
     - name: Install package from wheel
+      shell: bash # Requiered for Windows, otherwise glob pattern will fail
       run: pip install dist/*.whl
     
     - name: Test import
@@ -95,7 +97,7 @@ jobs:
         # Create a fresh environment and install the package
         conda create -n test-env python=${{ matrix.python-version }} -y
         conda activate test-env
-        conda install $PACKAGE_PATH -y
+        conda install $PACKAGE_PATH -c conda-forge -y
     
     - name: Test conda package import
       shell: bash -l {0}
@@ -142,8 +144,10 @@ jobs:
         conda activate tdlm
         python -c "import numpy, pandas, tabulate, tqdm; print('All dependencies imported successfully')"
         
-        # Install the package in development mode
-        pip install -e .
+        # Install the pre-built conda package
+        PACKAGE_PATH=$(find conda-dist -name "*.tar.bz2" | head -1)
+        echo "Installing package: $PACKAGE_PATH"
+        conda install $PACKAGE_PATH -c conda-forge -y
         python -c "from TDLM import tdlm; print('TDLM imported successfully')"
     
     - name: Run tests in conda environment
