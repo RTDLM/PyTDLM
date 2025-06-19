@@ -94,7 +94,7 @@ jobs:
         # Create a fresh environment and install the package
         conda create -n test-env python=${{ matrix.python-version }} -y
         conda activate test-env
-        conda install -c ./conda-dist tdlm -y
+        conda install -c ./conda-dist pytdlm -y
     
     - name: Test conda package import
       shell: bash -l {0}

@@ -59,10 +59,10 @@ jobs:
       run: |
         # Wait a bit for PyPI to be available
         sleep 60
-        grayskull pypi TDLM
+        grayskull pypi PyTDLM
         
     - name: Upload generated recipe
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: conda-forge-recipe
         path: TDLM/
@@ -90,7 +90,7 @@ jobs:
             
             ## Distribution Status
             
-            ✅ **PyPI:** Available at https://pypi.org/project/TDLM/${context.payload.release.tag_name}/
+            ✅ **PyPI:** Available at https://pypi.org/project/PyTDLM/${context.payload.release.tag_name}/
             
             ## Conda-forge Next Steps
             
@@ -105,7 +105,7 @@ jobs:
             
             **Generated conda recipe is available in the workflow artifacts above.**
             
-            **Feedstock location (after initial submission):** https://github.com/conda-forge/tdlm-feedstock`
+            **Feedstock location (after initial submission):** https://github.com/conda-forge/pytdlm-feedstock`
           })
     
     - name: Check if conda-forge feedstock exists

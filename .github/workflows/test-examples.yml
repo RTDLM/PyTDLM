@@ -46,7 +46,7 @@ jobs:
         conda build . --output-folder conda-dist
         
         # Install the built package
-        conda install -c ./conda-dist tdlm -y
+        conda install -c ./conda-dist pytdlm -y
         
         # Test the example
         cd docs/examples
