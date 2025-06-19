@@ -1,10 +1,10 @@
-# TDLM: Systematic comparison of trip distribution laws and models
+# PyTDLM: Systematic comparison of trip distribution laws and models
 
 A Python port of the [TDLM R package](https://github.com/RTDLM/TDLM), with numpy-based implementations and parallel processing support for multiple exponent values.
 
 ## Overview
 
-TDLM provides implementations of several trip distribution models commonly used in transportation planning and spatial analysis:
+PyTDLM provides implementations of several trip distribution models commonly used in transportation planning and spatial analysis:
 
 ### Available Laws
 - **GravExp**: Gravity model with exponential distance decay
@@ -24,14 +24,14 @@ TDLM provides implementations of several trip distribution models commonly used 
 
 ## Installation
 
-### Using conda (recommended)
+### Using conda
 ```bash
-conda install -c conda-forge tdlm
+conda install -c conda-forge pytdlm
 ```
 
 ### Using pip
 ```bash
-pip install TDLM
+pip install PyTDLM
 ```
 
 ### From source

@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "TDLM"
+name = "PyTDLM"
 dynamic = ["version"]
 description = "Systematic comparison of trip distribution laws and models"
 readme = "README.md"

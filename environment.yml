@@ -1,4 +1,4 @@
-name: tdlm
+name: pytdlm
 channels:
   - conda-forge
   - defaults

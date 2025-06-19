@@ -76,8 +76,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
         channels: conda-forge,defaults
         channel-priority: strict
-        miniconda-version: "latest"
-    
+    	miniconda-version: "latest"
+    	
     - name: Install conda-build
       shell: bash -l {0}
       run: |
@@ -129,7 +129,6 @@ jobs:
         auto-update-conda: true
         python-version: 3.9
         channels: conda-forge,defaults
-        miniconda-version: "latest"
     
     - name: Create environment from environment.yml
       shell: bash -l {0}
