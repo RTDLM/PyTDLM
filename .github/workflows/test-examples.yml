@@ -25,7 +25,7 @@ jobs:
     
     - name: Test basic usage example with pip
       run: |
-        cd docs/examples
+        cd examples
         python basic_usage.py
     
     - name: Set up Miniconda for conda test
