@@ -1,10 +1,13 @@
-# PyTDLM: Systematic comparison of trip distribution laws and models
+# PyTDLM: Systematic comparison of trip distribution laws and models in Python
 
-A Python port of the [TDLM R package](https://github.com/RTDLM/TDLM), with numpy-based implementations and parallel processing support for multiple exponent values.
+A Python port of the [TDLM R package](https://github.com/RTDLM/TDLM), with 
+numpy-based implementations and parallel processing support for multiple 
+exponent values.
 
 ## Overview
 
-PyTDLM provides implementations of several trip distribution models commonly used in transportation planning and spatial analysis:
+PyTDLM provides implementations of several trip distribution models commonly 
+used in transportation planning and spatial analysis:
 
 ### Available Laws
 - **GravExp**: Gravity model with exponential distance decay
@@ -37,7 +40,7 @@ pip install PyTDLM
 ### From source
 ```bash
 git clone https://github.com/PyTDLM/TDLM.git
-cd TDLM
+cd PyTDLM
 pip install -e .
 ```
 
@@ -82,21 +85,18 @@ print(gof_results[0.1].to_markdown(index=False))
 
 ## Documentation
 
-For detailed documentation and examples, visit: [https://rtdlm.github.io/PyTDLM/](https://rtdlm.github.io/PyTDLM/)
-
-## License
-
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+For detailed documentation and examples, visit: 
+[https://rtdlm.github.io/PyTDLM/](https://rtdlm.github.io/PyTDLM/)
 
 ## Citation
 
-If you use this library in your research, please cite:
+If you use this library in your research, please cite: [Reference to come].
 
 ```bibtex
-@software{lenormand2024tdlm,
-  title={TDLM: Trip Distribution Law Models},
-  author={Lenormand, Maxime},
-  year={2024},
-  url={https://github.com/RTDLM/PyTDLM}
+@software{PyTDLM,
+  author = {Perrier, R., Gargiulo, G., Jayet, C. and Lenormand, M.},
+  title = {PyTDLM: Systematic comparison of trip distribution laws and models in Python},
+  year = {2025},
+  note = {Reference forthcoming}
 }
 ```

@@ -49,5 +49,5 @@ jobs:
         conda install -c ./conda-dist pytdlm -y
         
         # Test the example
-        cd docs/examples
+        cd examples
         python basic_usage.py
