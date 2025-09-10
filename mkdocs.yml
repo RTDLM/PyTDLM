@@ -1,6 +1,18 @@
-site_name: PyTDLM Documentation
+site_name: PyTDLM
+site_url: https://rtdlm.github.io/PyTDLM/
+repo_url: https://github.com/RTDLM/PyTDLM
+repo_name: PyTDLM
 theme:
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  icon:
+    repo: fontawesome/brands/github
   name: material
+  palette:
+    primary: deep purple
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
 plugins:
   - mkdocstrings
 markdown_extensions:
@@ -10,4 +22,8 @@ markdown_extensions:
       permalink: true
 nav:
   - Home: index.md
+  - Quick start: start.md
+  - Tutorial: tutorial.md
+  - News: news.md
+
 

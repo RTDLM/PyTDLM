@@ -8,7 +8,8 @@ dynamic = ["version"]
 description = "Systematic comparison of trip distribution laws and models"
 readme = "README.md"
 license = {text = "GPL-3.0"}
-authors = [
+maintainers = [
+    {name = "Rémi Perrier", email = "remi.perrier@cnrs.fr"}
     {name = "Maxime Lenormand", email = "maxime.lenormand@inrae.fr"}
 ]
 keywords = ["spatial-interaction", "gravity-model", "trip-distribution"]

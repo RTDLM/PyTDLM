@@ -1,15 +1,24 @@
-# PyTDLM: Systematic comparison of trip distribution laws and models in Python
+# __PyTDLM__ <img src="docs/assets/logo.png" align="right" alt="" width="138" />
+
+# Systematic comparison of trip distribution laws and models in Python
+
+<!-- badges: start -->
+[![Test Build and Distribution](https://github.com/RTDLM/PyTDLM/actions/workflows/test-builds.yml/badge.svg)](https://github.com/RTDLM/PyTDLM/actions/workflows/test-builds.yml)
+[![PyPi](https://img.shields.io/pypi/v/pytdlm.svg)](https://pypi.org/project/pytdlm)
+[![Downloads](https://img.shields.io/pypi/dm/pytdlm.svg)](https://pypistats.org/packages/pytdlm)
+<!-- badges: end -->
+
+## Description
 
 A Python port of the [TDLM R package](https://github.com/RTDLM/TDLM), with 
 numpy-based implementations and parallel processing support for multiple 
 exponent values.
 
-## Overview
+[PyTDLM](https://rtdlm.github.io/PyTDLM/) provides implementations of several 
+trip distribution models commonly used in transportation planning and 
+spatial analysis:
 
-PyTDLM provides implementations of several trip distribution models commonly 
-used in transportation planning and spatial analysis:
-
-### Available Laws
+### Available laws
 - **GravExp**: Gravity model with exponential distance decay
 - **NGravExp**: Normalized gravity model with exponential decay
 - **GravPow**: Gravity model with power distance decay
@@ -19,7 +28,7 @@ used in transportation planning and spatial analysis:
 - **RadExt**: Extended radiation model
 - **Rand**: Random model (baseline)
 
-### Available Models
+### Available models
 - **UM**: Unconstrained Model
 - **PCM**: Production Constrained Model
 - **ACM**: Attraction Constrained Model
@@ -44,7 +53,7 @@ cd PyTDLM
 pip install -e .
 ```
 
-## Quick Start
+## Quick start
 
 ```python
 import numpy as np
