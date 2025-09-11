@@ -116,6 +116,9 @@ OD matrices. Six goodness-of-fit measures have been considered at this stage.
 **TDLM** includes utility functions to check, format and generate the inputs 
 data and help to calibrate the trip distribution laws. 
 
+# Example
+
+Comparison with the R version (time...)
 
 # Acknowledgements
 
