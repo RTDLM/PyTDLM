@@ -12,7 +12,7 @@ numpy-based implementations and parallel processing support for multiple
 exponent values.
 
 [PyTDLM](https://rtdlm.github.io/PyTDLM/) provides implementations of several 
-trip distribution models commonly used in transportation planning and 
+trip distribution laws and models commonly used in transportation planning and 
 spatial analysis:
 
 ### Available laws

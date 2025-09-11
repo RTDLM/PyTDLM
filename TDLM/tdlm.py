@@ -1,8 +1,11 @@
 """
-TDLM: Trip Distribution Law Models Library
+TDLM: Systematic comparison of trip distribution laws and models in Python
 
-Author: Maxime Lenormand (2015)
-Converted to Python with enhanced parallel processing support
+Author: Rémi Perrier (2025)
+
+A Python port of the TDLM R package, with 
+numpy-based implementations and parallel processing support for multiple 
+exponent values.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License version 3.

@@ -1,19 +1,19 @@
 """
-TDLM: Trip Distribution Law Models Library
+TDLM: Systematic comparison of trip distribution laws and models in Python
 
-A Python library for simulating trip distribution using various gravity models
-and spatial interaction laws.
+A Python port of the TDLM R package, with 
+numpy-based implementations and parallel processing support for multiple 
+exponent values.
 
-Author: Maxime Lenormand (2015)
-Converted to library format with enhanced parallel processing support
+Author: Rémi Perrier (2025)
 """
 
 from . import tdlm as tdlm
 from .tdlm import run_law_model, gof, TDLMError
 
 __version__ = "0.1.0"
-__author__ = "Maxime Lenormand"
-__email__ = "maxime.lenormand@inrae.fr"
+__author__ = "Rémi Perrier"
+__email__ = "remi.perrier@cnrs.fr"
 __license__ = "GPL-3.0"
 
 __all__ = [
