@@ -1,22 +1,33 @@
 ---
-title: 'TDLM: An R package for a systematic comparison of trip distribution laws and models'
+title: 'PyTDLM: Systematic comparison of trip distribution laws and models in Python'
 tags:
-- R
+- Python
 - Spatial Interaction Models
 - Spatial networks
 - Commuting networks
 - Gravity model
 - Radiation model
-date: "25 July 2023"
+date: "11 September 2025"
 output: pdf_document
 authors:
+- name: "Rémi Perrier"
+  orcid: "0000-0001-6025-211X"
+  affiliation: 1
+- name: "Floriana Gargiulo"
+  orcid: "0000-0001-9813-1815"
+  affiliation: 1
+- name: "Cyril Jayet"
+  orcid: "0000-0001-8401-8379"
+  affiliation: 1
 - name: "Maxime Lenormand"
   orcid: "0000-0001-6362-3473"
-  affiliation: 1
-bibliography: paper.bib
+  affiliation: 2
 affiliations:
-- name: TETIS, Univ Montpellier, AgroParisTech, CIRAD, CNRS, INRAE, Montpellier, France
+- name: Sorbonne Université, CNRS, Groupe d'Étude des Méthodes de l'Analyse Sociologique de la Sorbonne, GEMASS, Paris, France
   index: 1
+- name: TETIS, Univ Montpellier, AgroParisTech, CIRAD, CNRS, INRAE, Montpellier, France
+  index: 2
+bibliography: paper.bib
 ---
 
 # Summary
@@ -104,5 +115,12 @@ OD matrices. Six goodness-of-fit measures have been considered at this stage.
 
 **TDLM** includes utility functions to check, format and generate the inputs 
 data and help to calibrate the trip distribution laws. 
+
+
+# Acknowledgements
+
+This work was supported by the Institute of Computing and Data Sciences 
+(Project ESTIMIA) and the French National Research Agency 
+(Project MOSIS, ANR-24-CE38-5528). 
 
 # References
