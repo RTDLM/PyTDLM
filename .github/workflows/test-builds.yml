@@ -138,7 +138,7 @@ jobs:
     - name: Test environment
       shell: bash -l {0}
       run: |
-        conda activate tdlm
+        conda activate pytdlm
         python -c "import numpy, pandas, tabulate, tqdm; print('All dependencies imported successfully')"
         
         # Install the pre-built conda package
