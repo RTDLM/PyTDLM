@@ -10,29 +10,23 @@
 
 ## Description
 
-A Python port of the [TDLM R package](https://github.com/RTDLM/TDLM), with 
+The main purpose of these packages is to provide a rigorous framework for 
+fairly comparing trip distribution laws and models, as described in 
+[Lenormand *et al.* (2016)](https://doi.org/10.1016/j.jtrangeo.2015.12.008). 
+This general framework relies on a two-step approach to generate mobility flows, 
+separating the trip distribution law, gravity or intervening opportunities, from 
+the modeling approach used to derive flows from this law. 
+
+To make this framework more accessible, we developed both an 
+[R package](https://rtdlm.github.io/TDLM/) 
+and a [Python package](https://rtdlm.github.io/PyTDLM/), which replace the 
+original [Java scripts](https://github.com/maximelenormand/Trip-distribution-laws-and-models) 
+and extend their functionality.  
+
+[PyTDLM](https://rtdlm.github.io/PyTDLM/) is a Python port of the 
+[TDLM R package](https://github.com/RTDLM/TDLM), with 
 numpy-based implementations and parallel processing support for multiple 
-exponent values.
-
-[PyTDLM](https://rtdlm.github.io/PyTDLM/) provides implementations of several 
-trip distribution laws and models commonly used in transportation planning and 
-spatial analysis:
-
-### Available laws
-- **GravExp**: Gravity model with exponential distance decay
-- **NGravExp**: Normalized gravity model with exponential decay
-- **GravPow**: Gravity model with power distance decay
-- **NGravPow**: Normalized gravity model with power decay
-- **Schneider**: Schneider's intervening opportunities model
-- **Rad**: Radiation model
-- **RadExt**: Extended radiation model
-- **Rand**: Random model (baseline)
-
-### Available models
-- **UM**: Unconstrained Model
-- **PCM**: Production Constrained Model
-- **ACM**: Attraction Constrained Model
-- **DCM**: Doubly Constrained Model
+exponent values. 
 
 ## Installation
 
