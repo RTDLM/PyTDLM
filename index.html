@@ -218,25 +218,6 @@
   
 
       
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="https://rtdlm.github.io/TDLM/index.html" class="md-tabs__link">
-        
-  
-  
-    
-  
-  R Package
-
-      </a>
-    </li>
-  
-
-      
     </ul>
   </div>
 </nav>
@@ -352,30 +333,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Description">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#available-laws" class="md-nav__link">
-    <span class="md-ellipsis">
-      Available laws
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#available-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      Available models
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -389,9 +346,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#using-conda-coming-soon" class="md-nav__link">
+  <a href="#using-conda" class="md-nav__link">
     <span class="md-ellipsis">
-      Using conda (coming soon)
+      Using conda
     </span>
   </a>
   
@@ -503,28 +460,6 @@
   
 
     
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="https://rtdlm.github.io/TDLM/index.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    R Package
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
   </ul>
 </nav>
                   </div>
@@ -560,30 +495,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Description">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#available-laws" class="md-nav__link">
-    <span class="md-ellipsis">
-      Available laws
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#available-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      Available models
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -597,9 +508,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#using-conda-coming-soon" class="md-nav__link">
+  <a href="#using-conda" class="md-nav__link">
     <span class="md-ellipsis">
-      Using conda (coming soon)
+      Using conda
     </span>
   </a>
   
@@ -660,51 +571,45 @@
 
 <h1 id="pytdlm-systematic-comparison-of-trip-distribution-laws-and-models-in-python">PyTDLM: Systematic comparison of trip distribution laws and models in Python<a class="headerlink" href="#pytdlm-systematic-comparison-of-trip-distribution-laws-and-models-in-python" title="Permanent link">&para;</a></h1>
 <h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">&para;</a></h2>
-<p>A Python port of the <a href="https://github.com/RTDLM/TDLM">TDLM R package</a>, with 
+<p>The main purpose of these packages is to provide a rigorous framework for 
+fairly comparing trip distribution laws and models, as described in 
+<a href="https://doi.org/10.1016/j.jtrangeo.2015.12.008">Lenormand <em>et al.</em> (2016)</a>. 
+This general framework relies on a two-step approach to generate mobility flows, 
+separating the trip distribution law, gravity or intervening opportunities, from 
+the modeling approach used to derive flows from this law. </p>
+<p>To make this framework more accessible, we developed both an 
+<a href="https://rtdlm.github.io/TDLM/">R package</a> 
+and a <a href="https://rtdlm.github.io/PyTDLM/">Python package</a>, which replace the 
+original <a href="https://github.com/maximelenormand/Trip-distribution-laws-and-models">Java scripts</a> 
+and extend their functionality.  </p>
+<p><a href="https://rtdlm.github.io/PyTDLM/">PyTDLM</a> is a Python port of the 
+<a href="https://github.com/RTDLM/TDLM">TDLM R package</a>, with 
 numpy-based implementations and parallel processing support for multiple 
-exponent values.</p>
-<p><a href="https://rtdlm.github.io/PyTDLM/">PyTDLM</a> provides implementations of several 
-trip distribution laws and models commonly used in transportation planning and 
-spatial analysis:</p>
-<h3 id="available-laws">Available laws<a class="headerlink" href="#available-laws" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>GravExp</strong>: Gravity model with exponential distance decay</li>
-<li><strong>NGravExp</strong>: Normalized gravity model with exponential decay</li>
-<li><strong>GravPow</strong>: Gravity model with power distance decay</li>
-<li><strong>NGravPow</strong>: Normalized gravity model with power decay</li>
-<li><strong>Schneider</strong>: Schneider's intervening opportunities model</li>
-<li><strong>Rad</strong>: Radiation model</li>
-<li><strong>RadExt</strong>: Extended radiation model</li>
-<li><strong>Rand</strong>: Random model (baseline)</li>
-</ul>
-<h3 id="available-models">Available models<a class="headerlink" href="#available-models" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>UM</strong>: Unconstrained Model</li>
-<li><strong>PCM</strong>: Production Constrained Model</li>
-<li><strong>ACM</strong>: Attraction Constrained Model</li>
-<li><strong>DCM</strong>: Doubly Constrained Model</li>
-</ul>
+exponent values. </p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<h3 id="using-conda-coming-soon">Using conda (coming soon)<a class="headerlink" href="#using-conda-coming-soon" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>pytdlm
-</span></code></pre></div>
+<h3 id="using-conda">Using conda<a class="headerlink" href="#using-conda" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>pytdlm
+</code></pre></div>
+
 <h3 id="using-pip">Using pip<a class="headerlink" href="#using-pip" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>PyTDLM
-</span></code></pre></div>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>PyTDLM
+</code></pre></div>
+
 <h3 id="from-source">From source<a class="headerlink" href="#from-source" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/PyTDLM/TDLM.git
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>PyTDLM
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
-</span></code></pre></div>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/PyTDLM/TDLM.git
+<span class="nb">cd</span><span class="w"> </span>PyTDLM
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</code></pre></div>
+
 <h2 id="citation">Citation<a class="headerlink" href="#citation" title="Permanent link">&para;</a></h2>
 <p>If you use this library in your research, please cite: [Reference to come].</p>
-<div class="language-bibtex highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nc">@software</span><span class="p">{</span><span class="nl">PyTDLM</span><span class="p">,</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="na">author</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Perrier, R., Gargiulo, G., Jayet, C. and Lenormand, M.}</span><span class="p">,</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="na">title</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{PyTDLM: Systematic comparison of trip distribution laws and models in Python}</span><span class="p">,</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="na">year</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{2025}</span><span class="p">,</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="na">note</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Reference forthcoming}</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">}</span>
-</span></code></pre></div>
+<div class="codehilite"><pre><span></span><code><span class="nc">@software</span><span class="p">{</span><span class="nl">PyTDLM</span><span class="p">,</span>
+<span class="w">  </span><span class="na">author</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Perrier, R., Gargiulo, G., Jayet, C. and Lenormand, M.}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">title</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{PyTDLM: Systematic comparison of trip distribution laws and models in Python}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">year</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{2025}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">note</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Reference forthcoming}</span>
+<span class="p">}</span>
+</code></pre></div>
 
 
 
