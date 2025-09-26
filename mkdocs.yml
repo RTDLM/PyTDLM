@@ -20,10 +20,18 @@ markdown_extensions:
   - codehilite
   - toc:
       permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
 nav:
   - Home: index.md
   - Quick start: start.md
   - Tutorial: tutorial.md
   - News: news.md
+  - R Package: https://rtdlm.github.io/TDLM/
 
 
