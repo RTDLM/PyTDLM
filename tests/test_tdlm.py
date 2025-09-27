@@ -5,7 +5,7 @@ Test suite for TDLM library
 import pytest
 import numpy as np
 import pandas as pd
-from TDLM import tdlm, TDLMError
+from TDLM import tdlm, _TDLMError
 
 
 class TestTDLM:
@@ -61,7 +61,7 @@ class TestTDLM:
     
     def test_invalid_law(self):
         """Test error handling for invalid law"""
-        with pytest.raises(TDLMError):
+        with pytest.raises(_TDLMError):
             tdlm.run_law_model(
                 law='InvalidLaw',
                 mass_origin=self.mi,
@@ -72,7 +72,7 @@ class TestTDLM:
     
     def test_invalid_model(self):
         """Test error handling for invalid model"""  
-        with pytest.raises(TDLMError):
+        with pytest.raises(_TDLMError):
             tdlm.run_law_model(
                 law='GravExp',
                 mass_origin=self.mi,
@@ -84,7 +84,7 @@ class TestTDLM:
     
     def test_dimension_mismatch(self):
         """Test error handling for dimension mismatch"""
-        with pytest.raises(TDLMError):
+        with pytest.raises(_TDLMError):
             tdlm.run_law_model(
                 law='GravExp',
                 mass_origin=self.mi,

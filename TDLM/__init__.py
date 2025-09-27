@@ -9,7 +9,7 @@ Author: Rémi Perrier (2025)
 """
 
 from . import tdlm as tdlm
-from .tdlm import run_law_model, gof, TDLMError
+from .tdlm import run_law_model, gof, _TDLMError
 
 __version__ = "0.1.0"
 __author__ = "Rémi Perrier"
