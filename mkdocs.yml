@@ -14,7 +14,17 @@ theme:
     - navigation.tabs
     - navigation.tabs.sticky
 plugins:
-  - mkdocstrings
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: numpy   # forces NumPy-style docstring parsing
+            show_source: true        # link back to code
+            show_root_heading: true
+            show_category_heading: true
+            heading_level: 2
+
 markdown_extensions:
   - admonition
   - codehilite
@@ -27,10 +37,15 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - markdown_katex:
+      no_inline_svg: True
+      insert_fonts_css: True
+
 nav:
   - Home: index.md
   - Quick start: start.md
   - Tutorial: tutorial.md
+  - Reference: reference.md
   - News: news.md
   - R Package: https://rtdlm.github.io/TDLM/
 

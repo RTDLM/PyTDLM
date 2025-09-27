@@ -24,8 +24,10 @@ from typing import Union, Optional, List, Dict
 import warnings
 
 
-class TDLMError(Exception):
-    """Custom exception for TDLM errors"""
+class _TDLMError(Exception):
+    """Custom exception for TDLM errors
+    :meta private:
+    """
     pass
 
 
@@ -34,14 +36,14 @@ def compute_opportunity(
     distance: np.ndarray,
     processes: Optional[int] = None
 ) -> np.ndarray:
-    """
-    Compute the opportunity matrix Sij: Number of opportunities located in a circle 
-    of radius dij centered in i (excluding the source and the destination).
+    r"""
+    Compute the opportunity matrix $`S_{i,j}`$ Number of opportunities located in a circle 
+    of radius $`d_{i,j}`$ centered in $`i`$ (excluding the source and the destination).
     
     Parameters
     ----------
     mass_destination : np.ndarray
-        Number of inhabitants at destination (mj)
+        Number of inhabitants at destination ($`m_j`$)
     distance : np.ndarray
         Distance matrix (n x n)
     processes : int, optional
@@ -50,13 +52,13 @@ def compute_opportunity(
     Returns
     -------
     np.ndarray
-        Opportunity matrix Sij of shape (n, n)
+        Opportunity matrix $`S_{i,j}`$ of shape (n, n)
     """
     n = len(mass_destination)
     
     # Validate inputs
     if distance.shape != (n, n):
-        raise TDLMError(f"distance matrix must be {n}x{n}")
+        raise _TDLMError(f"distance matrix must be {n}x{n}")
     
     print(f"Computing opportunity matrix for {n} regions...")
     
@@ -149,9 +151,9 @@ def run_law_model(
         Trip distribution law. One of: "GravExp", "NGravExp", "GravPow", 
         "NGravPow", "Schneider", "Rad", "RadExt", "Rand"
     mass_origin : np.ndarray
-        Number of inhabitants at origin (mi)
+        Number of inhabitants at origin ($`m_i`$)
     mass_destination : np.ndarray  
-        Number of inhabitants at destination (mj)
+        Number of inhabitants at destination ($`m_j`$)
     distance : np.ndarray
         Distance matrix (n x n)
     opportunity : np.ndarray, optional
@@ -164,9 +166,9 @@ def run_law_model(
     model : str, default "UM"
         Distribution model. One of: "UM", "PCM", "ACM", "DCM"
     out_trips : np.ndarray, optional
-        Number of out-commuters (Oi). Required for constrained models
+        Number of out-commuters ($`O_i`$). Required for constrained models
     in_trips : np.ndarray, optional
-        Number of in-commuters (Dj). Required for ACM and DCM models
+        Number of in-commuters ($`D_j`$). Required for ACM and DCM models
     repli : int, default 1
         Number of replications
     processes : int, optional
@@ -296,7 +298,7 @@ def gof(
         selected_measures = measures if isinstance(measures, list) else [measures]
         invalid = set(selected_measures) - set(all_measures)
         if invalid:
-            raise TDLMError(f"Invalid measures: {invalid}. Available: {['all']+all_measures}")
+            raise _TDLMError(f"Invalid measures: {invalid}. Available: {['all']+all_measures}")
     
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
@@ -361,38 +363,38 @@ def _validate_inputs(law, model, mass_origin, mass_destination, distance,
     valid_models = ["UM", "PCM", "ACM", "DCM"]
     
     if law not in valid_laws:
-        raise TDLMError(f"Invalid law '{law}'. Must be one of: {valid_laws}")
+        raise _TDLMError(f"Invalid law '{law}'. Must be one of: {valid_laws}")
     
     if model not in valid_models:
-        raise TDLMError(f"Invalid model '{model}'. Must be one of: {valid_models}")
+        raise _TDLMError(f"Invalid model '{model}'. Must be one of: {valid_models}")
     
     # Check array dimensions
     n = len(mass_origin)
     if len(mass_destination) != n:
-        raise TDLMError("mass_origin and mass_destination must have same length")
+        raise _TDLMError("mass_origin and mass_destination must have same length")
     
     if distance.shape != (n, n):
-        raise TDLMError(f"distance matrix must be {n}x{n}")
+        raise _TDLMError(f"distance matrix must be {n}x{n}")
     
     # Check opportunity matrix for relevant laws
     if law in ["Rad", "RadExt", "Schneider"]:
         if opportunity is None:
-            raise TDLMError(f"opportunity matrix required for law '{law}'")
+            raise _TDLMError(f"opportunity matrix required for law '{law}'")
         if opportunity.shape != (n, n):
-            raise TDLMError(f"opportunity matrix must be {n}x{n}")
+            raise _TDLMError(f"opportunity matrix must be {n}x{n}")
     
     # Check trip constraints for models
     if model in ["PCM", "DCM"] and out_trips is None:
-        raise TDLMError(f"out_trips required for model '{model}'")
+        raise _TDLMError(f"out_trips required for model '{model}'")
     
     if model in ["ACM", "DCM"] and in_trips is None:
-        raise TDLMError(f"in_trips required for model '{model}'")
+        raise _TDLMError(f"in_trips required for model '{model}'")
     
     if out_trips is not None and len(out_trips) != n:
-        raise TDLMError("out_trips must have same length as mass arrays")
+        raise _TDLMError("out_trips must have same length as mass arrays")
         
     if in_trips is not None and len(in_trips) != n:
-        raise TDLMError("in_trips must have same length as mass arrays")
+        raise _TDLMError("in_trips must have same length as mass arrays")
 
 
 def _process_exponent(params):

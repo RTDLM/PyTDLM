@@ -19,6 +19,5 @@ __license__ = "GPL-3.0"
 __all__ = [
     "tdlm",
     "run_law_model", 
-    "gof",
-    "TDLMError"
+    "gof"
 ]
