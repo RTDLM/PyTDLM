@@ -9,7 +9,7 @@ Author: Rémi Perrier (2025)
 """
 
 from . import tdlm as tdlm
-from .tdlm import extract_opportunities, run_law_model, gof, _TDLMError
+from .tdlm import extract_opportunities, run_law_model, run_law, gof, _TDLMError
 
 __version__ = "0.1.0"
 __author__ = "Rémi Perrier"
@@ -19,7 +19,8 @@ __license__ = "GPL-3.0"
 __all__ = [
     "tdlm",
     "extract_opportunities"
-    "run_law_model", 
+    "run_law_model",
+    "run_law",
     "gof",
     "_TDLMError"
 ]

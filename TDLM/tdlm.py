@@ -144,7 +144,7 @@ def run_law_model(
     random_seed: Optional[int] = None
 ) -> Union[np.ndarray, Dict[str, np.ndarray]]:
     r"""
-    Run trip distribution law model simulations.
+    Run trip distribution law and model simulations.
     
     Parameters
     ----------
@@ -186,7 +186,9 @@ def run_law_model(
         If single exponent: np.ndarray of shape (repli, n, n).
         If multiple exponents: Dict with exponents as keys, arrays as values.
     """
-    
+    if average:
+        repli = 1
+        
     # Check if opportunity matrix is needed and compute if not provided
     laws_requiring_opportunity = ["Rad", "RadExt", "Schneider"]
     if law in laws_requiring_opportunity and opportunity is None:
@@ -261,6 +263,101 @@ def run_law_model(
     else:
         return output
 
+def run_law(
+    law: str,
+    mass_origin: np.ndarray,
+    mass_destination: np.ndarray, 
+    distance: np.ndarray,
+    opportunity: Optional[np.ndarray] = None,
+    exponent: Union[float, np.ndarray] = 1.0,
+    processes: Optional[int] = None,
+    random_seed: Optional[int] = None
+) -> Union[np.ndarray, Dict[str, np.ndarray]]:
+    r"""
+    Estimate the probability matrix $`p_{i,j}`$ according to the trip distribution law.
+    
+    Parameters
+    ----------
+    law : str
+        Trip distribution law. One of: "GravExp", "NGravExp", "GravPow", 
+        "NGravPow", "Schneider", "Rad", "RadExt", "Rand"
+    mass_origin : np.ndarray
+        Number of inhabitants at origin $`m_i`$
+    mass_destination : np.ndarray  
+        Number of inhabitants at destination $`m_j`$
+    distance : np.ndarray
+        Distance matrix $`d_{i,j}`$ (n x n)
+    opportunity : np.ndarray, optional
+        Matrix of opportunities $`S_{i,j}`$ (n x n). Required for "Rad", "RadExt", "Schneider".
+        If not provided and required, will be computed automatically.
+    exponent : float or np.ndarray
+        Exponent parameter(s) for the distribution law
+    processes : int, optional
+        Number of processes for parallel computation. Default: CPU count - 2
+    random_seed : int, optional
+        Random seed for reproducibility
+        
+    Returns
+    -------
+    Union[np.ndarray, Dict[str, np.ndarray]]
+        Estimated matrix or matrices of probabilities $`p_{i,j}`$.
+        If single exponent: np.ndarray of shape (n, n).
+        If multiple exponents: Dict with exponents as keys, arrays as values.
+    """
+
+    # Check if opportunity matrix is needed and compute if not provided
+    laws_requiring_opportunity = ["Rad", "RadExt", "Schneider"]
+    if law in laws_requiring_opportunity and opportunity is None:
+        print(f"Law '{law}' requires opportunity matrix. Computing automatically...")
+        opportunity = extract_opportunities(mass_destination, distance, processes)
+    
+    # Input validation
+    _validate_inputs(law, "UM", mass_origin, mass_destination, distance, 
+                    opportunity, None, None)
+    
+    # Set random seed if provided
+    if random_seed is not None:
+        np.random.seed(random_seed)
+    
+    # Handle single vs multiple exponents
+    exponents = np.atleast_1d(exponent)
+    single_exponent = len(exponents) == 1
+    
+ 
+    # Setup multiprocessing
+    num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
+    
+    if len(exponents) > 1 and num_processes > 1:
+        # Parallel processing for multiple exponents
+        print(f'Estimating probabilities for {law}')
+        print(f'Using {num_processes} parallel processes')
+        
+        with mp.Pool(processes=num_processes) as pool:
+            params = [(law, distance, opportunity, mass_origin, mass_destination, beta) for beta in exponents]
+            results = list(tqdm(pool.starmap(_proba, params), 
+                              total=len(exponents), desc='Computing exponents'))
+        
+        # Organize results
+        output = {}
+        for i, beta in enumerate(exponents):
+            output[beta] = results[i]
+                
+    else:
+        # Sequential processing
+        output = {}
+        if single_exponent:
+            beta = exponents[0]
+            print(f'Estimating probabilities for {law} with β = {beta:.2g}')
+            return _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
+
+        else:
+            print(f'Estimating probabilities for {law}')
+            
+            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
+                output[beta] = _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
+    print('Done\n')
+    
+    return output
 
 def gof(
     sim: Union[np.ndarray, Dict[str, np.ndarray]], 
