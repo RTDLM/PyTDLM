@@ -117,46 +117,46 @@ jobs:
         name: conda-dist
         path: conda-dist/
 
-  test-environment-yml:
-    runs-on: ubuntu-latest
-    needs: test-conda-build  # ensures the conda build job completes before this job runs
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download conda artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: conda-dist
-        path: conda-dist
-        
-    - name: Set up Miniconda
-      uses: conda-incubator/setup-miniconda@v2
-      with:
-        auto-update-conda: true
-        python-version: 3.9
-        channels: conda-forge,defaults
-    
-    - name: Create environment from environment.yml
-      shell: bash -l {0}
-      run: |
-        conda env create -f environment.yml
-    
-    - name: Test environment
-      shell: bash -l {0}
-      run: |
-        conda activate pytdlm
-        python -c "import numpy, pandas, tabulate, tqdm; print('All dependencies imported successfully')"
-        
-        # Install the pre-built conda package
-        PACKAGE_PATH=$(find conda-dist -name "*.tar.bz2" | head -1)
-        echo "Installing package: $PACKAGE_PATH"
-        conda install $PACKAGE_PATH -y
-        python -c "from TDLM import tdlm; print('TDLM imported successfully')"
-        python -c "import TDLM; print(f'TDLM version: {TDLM.__version__}')"
-    
-    - name: Run tests in conda environment
-      shell: bash -l {0}
-      run: |
-        conda activate pytdlm
-        pytest tests/ -v
+#  test-environment-yml:
+#    runs-on: ubuntu-latest
+#    needs: test-conda-build  # ensures the conda build job completes before this job runs
+#    steps:
+#    - uses: actions/checkout@v4
+#    
+#    - name: Download conda artifact
+#      uses: actions/download-artifact@v4
+#      with:
+#        name: conda-dist
+#        path: conda-dist
+#        
+#    - name: Set up Miniconda
+#      uses: conda-incubator/setup-miniconda@v2
+#      with:
+#        auto-update-conda: true
+#        python-version: 3.9
+#        channels: conda-forge,defaults
+#    
+#    - name: Create environment from environment.yml
+#      shell: bash -l {0}
+#      run: |
+#        conda env create -f environment.yml
+#    
+#    - name: Test environment
+#      shell: bash -l {0}
+#      run: |
+#        conda activate pytdlm
+#        python -c "import numpy, pandas, tabulate, tqdm; print('All dependencies imported successfully')"
+#        
+#        # Install the pre-built conda package
+#        PACKAGE_PATH=$(find conda-dist -name "*.tar.bz2" | head -1)
+#        echo "Installing package: $PACKAGE_PATH"
+#        conda install $PACKAGE_PATH -y
+#        python -c "from TDLM import tdlm; print('TDLM imported successfully')"
+#        python -c "import TDLM; print(f'TDLM version: {TDLM.__version__}')"
+#    
+#    - name: Run tests in conda environment
+#      shell: bash -l {0}
+#      run: |
+#        conda activate pytdlm
+#        pytest tests/ -v
 

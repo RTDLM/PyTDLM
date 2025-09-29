@@ -31,7 +31,7 @@ class _TDLMError(Exception):
     pass
 
 
-def compute_opportunity(
+def extract_opportunity(
     mass_destination: np.ndarray,
     distance: np.ndarray,
     processes: Optional[int] = None
@@ -43,16 +43,16 @@ def compute_opportunity(
     Parameters
     ----------
     mass_destination : np.ndarray
-        Number of inhabitants at destination ($`m_j`$)
+        Number of inhabitants at destination $`m_j`$
     distance : np.ndarray
-        Distance matrix (n x n)
+        Distance matrix $`d_{i,j}`$ (n x n)
     processes : int, optional
         Number of processes for parallel computation. Default: CPU count - 2
         
     Returns
     -------
     np.ndarray
-        Opportunity matrix $`S_{i,j}`$ of shape (n, n)
+        Opportunity matrix $`S_{i,j}`$ (n x n)
     """
     n = len(mass_destination)
     
@@ -142,7 +142,7 @@ def run_law_model(
     processes: Optional[int] = None,
     random_seed: Optional[int] = None
 ) -> Union[np.ndarray, Dict[str, np.ndarray]]:
-    """
+    r"""
     Run trip distribution law model simulations.
     
     Parameters
@@ -151,13 +151,13 @@ def run_law_model(
         Trip distribution law. One of: "GravExp", "NGravExp", "GravPow", 
         "NGravPow", "Schneider", "Rad", "RadExt", "Rand"
     mass_origin : np.ndarray
-        Number of inhabitants at origin ($`m_i`$)
+        Number of inhabitants at origin $`m_i`$
     mass_destination : np.ndarray  
-        Number of inhabitants at destination ($`m_j`$)
+        Number of inhabitants at destination $`m_j`$
     distance : np.ndarray
-        Distance matrix (n x n)
+        Distance matrix $`d_{i,j}`$ (n x n)
     opportunity : np.ndarray, optional
-        Matrix of opportunities (n x n). Required for "Rad", "RadExt", "Schneider".
+        Matrix of opportunities $`S_{i,j}`$ (n x n). Required for "Rad", "RadExt", "Schneider".
         If not provided and required, will be computed automatically.
     exponent : float or np.ndarray
         Exponent parameter(s) for the distribution law
@@ -166,9 +166,9 @@ def run_law_model(
     model : str, default "UM"
         Distribution model. One of: "UM", "PCM", "ACM", "DCM"
     out_trips : np.ndarray, optional
-        Number of out-commuters ($`O_i`$). Required for constrained models
+        Number of out-commuters $`O_i`$) Required for constrained models
     in_trips : np.ndarray, optional
-        Number of in-commuters ($`D_j`$). Required for ACM and DCM models
+        Number of in-commuters $`D_j`$. Required for ACM and DCM models
     repli : int, default 1
         Number of replications
     processes : int, optional
@@ -179,15 +179,16 @@ def run_law_model(
     Returns
     -------
     Union[np.ndarray, Dict[str, np.ndarray]]
-        If single exponent: np.ndarray of shape (repli, n, n)
-        If multiple exponents: Dict with exponents as keys, arrays as values
+        Simulated trip matrix or matrices $`\tilde{T}_{i,j}`$.
+        If single exponent: np.ndarray of shape (repli, n, n).
+        If multiple exponents: Dict with exponents as keys, arrays as values.
     """
     
     # Check if opportunity matrix is needed and compute if not provided
     laws_requiring_opportunity = ["Rad", "RadExt", "Schneider"]
     if law in laws_requiring_opportunity and opportunity is None:
         print(f"Law '{law}' requires opportunity matrix. Computing automatically...")
-        opportunity = compute_opportunity(mass_destination, distance, processes)
+        opportunity = extract_opportunity(mass_destination, distance, processes)
     
     # Input validation
     _validate_inputs(law, model, mass_origin, mass_destination, distance, 
@@ -265,17 +266,17 @@ def gof(
     measures: Union[str, List[str]] = "all",
     processes: Optional[int] = None
 ) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
-    """
+    r"""
     Calculate goodness-of-fit measures for simulated vs observed trip matrices.
     
     Parameters
     ----------
     sim : np.ndarray or Dict[str, np.ndarray]
-        Simulated trip matrices. If Dict, keys should be exponent values
+        Simulated trip matrix or matrices $`\tilde{T}_{i,j}`$. If Dict, keys should be exponent values
     obs : np.ndarray
-        Observed trip matrix (n x n)
+        Observed trip matrix $`T_{i,j}`$ (n x n)
     distance : np.ndarray
-        Distance matrix (n x n)
+        Distance matrix $`d_{i,j}`$ (n x n)
     measures : str or List[str], default "all"
         Measures to calculate. "all" or subset of:
         ["CPC", "CPL", "CPCd", "KS_stat", "KS_pval", "KL_div", "RMSE"]
@@ -285,8 +286,8 @@ def gof(
     Returns
     -------
     Union[pd.DataFrame, Dict[str, pd.DataFrame]]
-        If single simulation: DataFrame with measures
-        If multiple simulations: Dict with exponents as keys, DataFrames as values
+        If single exponent: DataFrame with measures.
+        If multiple exponents: Dict with exponents as keys, DataFrames as values.
     """
     
     # Available measures
