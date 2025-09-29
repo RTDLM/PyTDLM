@@ -138,6 +138,7 @@ def run_law_model(
     model: str = "UM",
     out_trips: Optional[np.ndarray] = None,
     in_trips: Optional[np.ndarray] = None,
+    average: bool = False,
     repli: int = 1,
     processes: Optional[int] = None,
     random_seed: Optional[int] = None
@@ -166,11 +167,13 @@ def run_law_model(
     model : str, default "UM"
         Distribution model. One of: "UM", "PCM", "ACM", "DCM"
     out_trips : np.ndarray, optional
-        Number of out-commuters $`O_i`$) Required for constrained models
+        Number of out-commuters $`O_i`$. Required for constrained models.
     in_trips : np.ndarray, optional
-        Number of in-commuters $`D_j`$. Required for ACM and DCM models
+        Number of in-commuters $`D_j`$. Required for ACM and DCM models.
+    average : bool, default False
+        Whether the average mobility flow matrix should be generated instead of the `repli` matrices based on random draws.
     repli : int, default 1
-        Number of replications
+        Number of replications. Note that `repli = 1` if `average = True`.
     processes : int, optional
         Number of processes for parallel computation. Default: CPU count - 2
     random_seed : int, optional
@@ -215,7 +218,7 @@ def run_law_model(
         print(f'Using {num_processes} parallel processes')
         
         with mp.Pool(processes=num_processes) as pool:
-            params = [(data, law, model, beta, repli, return_proba) for beta in exponents]
+            params = [(data, law, model, beta, repli, return_proba, average) for beta in exponents]
             results = list(tqdm(pool.imap(_process_exponent, params), 
                               total=len(exponents), desc='Computing exponents'))
         
@@ -233,7 +236,7 @@ def run_law_model(
         if single_exponent:
             beta = exponents[0]
             print(f'Simulating matrix for {law} β = {beta:.2g} with {model}')
-            params = (data, law, model, beta, repli, return_proba)
+            params = (data, law, model, beta, repli, return_proba, average)
             result = _process_exponent(params)
             if return_proba:
                 output[beta] = result
@@ -244,7 +247,7 @@ def run_law_model(
             
             
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
-                params = (data, law, model, beta, repli, return_proba)
+                params = (data, law, model, beta, repli, return_proba, average)
                 result = _process_exponent(params)
                 if return_proba:
                     output[beta] = result
@@ -400,7 +403,7 @@ def _validate_inputs(law, model, mass_origin, mass_destination, distance,
 
 def _process_exponent(params):
     """Process a single exponent value"""
-    data, law, model, beta, repli, return_proba = params
+    data, law, model, beta, repli, return_proba, average = params
     n, mi, mj, Oi, Dj, dij, sij = data
     
     # Build the matrix pij according to the law
@@ -416,13 +419,13 @@ def _process_exponent(params):
 
         # Network generation according to the constrained model
         if model == "UM":  # Unconstrained model
-            S = _UM(pij, Oi)
+            S = _UM(pij, Oi, average)
         elif model == "PCM":  # Production constrained model
-            S = _PCM(pij, Oi)
+            S = _PCM(pij, Oi, average)
         elif model == "ACM":  # Attraction constrained model
-            S = _ACM(pij, Dj)
+            S = _ACM(pij, Dj, average)
         elif model == "DCM":  # Doubly constrained model
-            S = _DCM(pij, Oi, Dj, 50, 0.01)
+            S = _DCM(pij, Oi, Dj, 50, 0.01, average)
 
         simulations.append(S)
     
@@ -572,27 +575,30 @@ def _proba(law, dij, sij, mi, mj, beta):
     return W
 
 
-def _UM(pij, Oi):
+def _UM(pij, Oi, average):
     """Generate the network using the Unconstrained Model"""
     n = pij.shape[0]
     nb_commuters = np.sum(Oi)
     sumt = np.sum(pij)
     sum_rows = np.sum(pij, axis=1)
-
-    S = np.floor(nb_commuters * pij / sumt) if sumt > 0 else np.zeros_like(pij)
-    nb = np.sum(S)
     
-    remaining = int(nb_commuters - nb)
-    if remaining > 0:
-        index = _Multinomial_ij(remaining, pij, sum_rows)
-        flat_indices = index[:, 0] * n + index[:, 1]
-        increments = np.bincount(flat_indices, minlength=n*n).reshape(n, n)
-        S += increments
-
+    if not average:
+        S = np.floor(nb_commuters * pij / sumt) if sumt > 0 else np.zeros_like(pij)
+        nb = np.sum(S)
+        
+        remaining = int(nb_commuters - nb)
+        if remaining > 0:
+            index = _Multinomial_ij(remaining, pij, sum_rows)
+            flat_indices = index[:, 0] * n + index[:, 1]
+            increments = np.bincount(flat_indices, minlength=n*n).reshape(n, n)
+            S += increments
+    else:
+        S = nb_commuters * pij / sumt
+        
     return S
 
 
-def _PCM(pij, Oi):
+def _PCM(pij, Oi, average):
     """Generate the network using the Production Constrained Model"""
     n = len(Oi)
     S = np.zeros((n, n))
@@ -604,22 +610,26 @@ def _PCM(pij, Oi):
     division_factors[valid_rows] = 1.0 / sum_rows[valid_rows]
     
     allocation_ratios = pij * division_factors[:, np.newaxis]
-    S = np.floor(Oi[:, np.newaxis] * allocation_ratios)
     
-    # Allocate remaining commuters
-    nb = np.sum(S, axis=1).astype(int)
-    
-    for i in range(n):
-        remaining = Oi[i] - nb[i]
-        if remaining > 0 and sum_rows[i] > 0:
-            index = _Multinomial_i(remaining, pij[i], sum_rows[i])
-            increments = np.bincount(index, minlength=n)
-            S[i] += increments
-    
+    if not average:
+        S = np.floor(Oi[:, np.newaxis] * allocation_ratios)
+        
+        # Allocate remaining commuters
+        nb = np.sum(S, axis=1).astype(int)
+        
+        for i in range(n):
+            remaining = Oi[i] - nb[i]
+            if remaining > 0 and sum_rows[i] > 0:
+                index = _Multinomial_i(remaining, pij[i], sum_rows[i])
+                increments = np.bincount(index, minlength=n)
+                S[i] += increments
+    else:
+        S = Oi[:, np.newaxis] * allocation_ratios
+        
     return S
 
 
-def _ACM(pij, Dj):
+def _ACM(pij, Dj, average):
     """Generate the network using the Attraction Constrained Model"""
     n = len(Dj)
     S = np.zeros((n, n))
@@ -632,23 +642,28 @@ def _ACM(pij, Dj):
     division_factors[valid_rows] = 1.0 / sum_rows[valid_rows]
     
     allocation_ratios = tweights * division_factors[:, np.newaxis]
-    initial_allocation = np.floor(Dj[:, np.newaxis] * allocation_ratios)
-    S = initial_allocation.T
     
-    # Allocate remaining commuters
-    nb = np.sum(S, axis=0).astype(int)
-    
-    for i in range(n):
-        remaining = Dj[i] - nb[i]
-        if remaining > 0 and sum_rows[i] > 0:
-            index = _Multinomial_i(remaining, tweights[i], sum_rows[i])
-            increments = np.bincount(index, minlength=n)
-            S[:, i] += increments
+    if not average:
+        initial_allocation = np.floor(Dj[:, np.newaxis] * allocation_ratios)
+        S = initial_allocation.T
+        
+        # Allocate remaining commuters
+        nb = np.sum(S, axis=0).astype(int)
+        
+        for i in range(n):
+            remaining = Dj[i] - nb[i]
+            if remaining > 0 and sum_rows[i] > 0:
+                index = _Multinomial_i(remaining, tweights[i], sum_rows[i])
+                increments = np.bincount(index, minlength=n)
+                S[:, i] += increments
+    else:
+        initial_allocation = Dj[:, np.newaxis] * allocation_ratios
+        S = initial_allocation.T
     
     return S
 
 
-def _DCM(pij, Oi, Dj, max_iter, closure):
+def _DCM(pij, Oi, Dj, max_iter, closure, average):
     """Generate the network using the Doubly Constrained Model"""
     n = len(Oi)
     
@@ -688,7 +703,11 @@ def _DCM(pij, Oi, Dj, max_iter, closure):
         iter_count += 1
 
     # Generate final matrix using UM
-    S = _UM(weights, Oi)
+    if not average:
+        S = _UM(weights, Oi, average)
+    else:
+        S = weights
+        
     return S
 
 
