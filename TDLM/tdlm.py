@@ -31,7 +31,7 @@ class _TDLMError(Exception):
     pass
 
 
-def extract_opportunity(
+def extract_opportunities(
     mass_destination: np.ndarray,
     distance: np.ndarray,
     processes: Optional[int] = None
@@ -188,7 +188,7 @@ def run_law_model(
     laws_requiring_opportunity = ["Rad", "RadExt", "Schneider"]
     if law in laws_requiring_opportunity and opportunity is None:
         print(f"Law '{law}' requires opportunity matrix. Computing automatically...")
-        opportunity = extract_opportunity(mass_destination, distance, processes)
+        opportunity = extract_opportunities(mass_destination, distance, processes)
     
     # Input validation
     _validate_inputs(law, model, mass_origin, mass_destination, distance, 
