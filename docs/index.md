@@ -18,7 +18,7 @@ To make this framework more accessible, we developed both an
 [R package](https://rtdlm.github.io/TDLM/) 
 and a [Python package](https://rtdlm.github.io/PyTDLM/), which replace the 
 original [Java scripts](https://github.com/maximelenormand/Trip-distribution-laws-and-models) 
-and extend their functionality.  
+and extend their functionality.
 
 [PyTDLM](https://rtdlm.github.io/PyTDLM/) is a Python port of the 
 [TDLM R package](https://github.com/RTDLM/TDLM), with 
@@ -27,7 +27,7 @@ exponent values.
 
 ## Installation
 
-### Using conda
+### Using conda (coming soon)
 ```bash
 conda install -c conda-forge pytdlm
 ```

@@ -30,7 +30,7 @@ exponent values.
 
 ## Installation
 
-### Using conda
+### Using conda (coming soon)
 ```bash
 conda install -c conda-forge pytdlm
 ```
