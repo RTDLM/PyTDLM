@@ -456,13 +456,13 @@ def run_model(
         if single_exponent:
             beta = exponents[0]
             print(f'Simulating matrix with {model}')
-            params = (data, 'Rand', model, beta, repli, False, average)
+            params = (data, probabilities[beta], 'Rand', model, beta, repli, False, average)
             result = _process_exponent(params)
             output[beta] = result['simulations']
         else:
             print(f'Running simulations with {model} model ({repli} replications)')
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
-                params = (data, 'Rand', model, beta, repli, False, average)
+                params = (data, probabilities[beta], 'Rand', model, beta, repli, False, average)
                 result = _process_exponent(params)
                 output[beta] = result['simulations']
     print('Done\n')
