@@ -62,7 +62,7 @@ def main():
         mass_origin=mi,
         mass_destination=mj,
         distance=dij,
-        opportunity=None,        # Not needed for this law
+        opportunities=None,        # Not needed for this law
         exponent=exponent,
         return_proba=False,
         model=model,

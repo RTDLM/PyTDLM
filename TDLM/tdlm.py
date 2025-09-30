@@ -239,7 +239,7 @@ def run_law_model(
         if single_exponent:
             beta = exponents[0]
             print(f'Simulating matrix for {law} β = {beta:.2g} with {model}')
-            params = (data, law, model, beta, repli, return_proba, average)
+            params = (data, pij, law, model, beta, repli, return_proba, average)
             result = _process_exponent(params)
             if return_proba:
                 output[beta] = result
@@ -250,7 +250,7 @@ def run_law_model(
             
             
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
-                params = (data, law, model, beta, repli, return_proba, average)
+                params = (data, pij, law, model, beta, repli, return_proba, average)
                 result = _process_exponent(params)
                 if return_proba:
                     output[beta] = result
@@ -378,7 +378,7 @@ def run_model(
     
     Parameters
     ----------
-    probabilities : Dict[float, np.ndarray]]
+    probabilities : Dict[float, np.ndarray]
         Estimated matrix or matrices of probabilities $`p_{i,j}`$.
         Dict with exponent(s) as key(s), arrays as values.
     mass_origin : np.ndarray
