@@ -37,7 +37,7 @@ def extract_opportunities(
     processes: Optional[int] = None
 ) -> np.ndarray:
     r"""
-    Compute the opportunity matrix $`S_{i,j}`$ Number of opportunities located in a circle 
+    Compute the opportunities matrix $`S_{i,j}`$ Number of opportunities located in a circle 
     of radius $`d_{i,j}`$ centered in $`i`$ (excluding the source and the destination).
     
     Parameters
@@ -52,7 +52,7 @@ def extract_opportunities(
     Returns
     -------
     np.ndarray
-        Opportunity matrix $`S_{i,j}`$ (n x n)
+        Opportunities matrix $`S_{i,j}`$ (n x n)
     """
     n = len(mass_destination)
     
@@ -60,7 +60,7 @@ def extract_opportunities(
     if distance.shape != (n, n):
         raise _TDLMError(f"distance matrix must be {n}x{n}")
     
-    print(f"Computing opportunity matrix for {n} regions...")
+    print(f"Computing opportunities matrix for {n} regions...")
     
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
@@ -71,7 +71,7 @@ def extract_opportunities(
     
     # Use multiprocessing to compute S matrix rows in parallel
     with mp.Pool(processes=num_processes) as pool:
-        results = list(tqdm(pool.imap(_process_opportunity_row, args_list), 
+        results = list(tqdm(pool.imap(_process_opportunities_row, args_list), 
                            total=n, desc="Computing opportunities"))
     
     # Collect results into S matrix
@@ -83,8 +83,8 @@ def extract_opportunities(
     return S
 
 
-def _process_opportunity_row(args):
-    """Process a single row of the opportunity matrix S with complete vectorization."""
+def _process_opportunities_row(args):
+    """Process a single row of the opportunities matrix S with complete vectorization."""
     i, dij, mj, n = args
     
     # Initialize row
@@ -132,7 +132,7 @@ def run_law_model(
     mass_origin: np.ndarray,
     mass_destination: np.ndarray, 
     distance: np.ndarray,
-    opportunity: Optional[np.ndarray] = None,
+    opportunities: Optional[np.ndarray] = None,
     exponent: Union[float, np.ndarray] = 1.0,
     return_proba: bool = False,
     model: str = "UM",
@@ -142,7 +142,7 @@ def run_law_model(
     repli: int = 1,
     processes: Optional[int] = None,
     random_seed: Optional[int] = None
-) -> Union[np.ndarray, Dict[str, np.ndarray]]:
+) -> Union[np.ndarray, Dict[float, np.ndarray]]:
     r"""
     Run trip distribution law and model simulations.
     
@@ -157,7 +157,7 @@ def run_law_model(
         Number of inhabitants at destination $`m_j`$
     distance : np.ndarray
         Distance matrix $`d_{i,j}`$ (n x n)
-    opportunity : np.ndarray, optional
+    opportunities : np.ndarray, optional
         Matrix of opportunities $`S_{i,j}`$ (n x n). Required for "Rad", "RadExt", "Schneider".
         If not provided and required, will be computed automatically.
     exponent : float or np.ndarray
@@ -181,7 +181,7 @@ def run_law_model(
         
     Returns
     -------
-    Union[np.ndarray, Dict[str, np.ndarray]]
+    Union[np.ndarray, Dict[float, np.ndarray]]
         Simulated trip matrix or matrices $`\tilde{T}_{i,j}`$.
         If single exponent: np.ndarray of shape (repli, n, n).
         If multiple exponents: Dict with exponents as keys, arrays as values.
@@ -189,15 +189,15 @@ def run_law_model(
     if average:
         repli = 1
         
-    # Check if opportunity matrix is needed and compute if not provided
-    laws_requiring_opportunity = ["Rad", "RadExt", "Schneider"]
-    if law in laws_requiring_opportunity and opportunity is None:
-        print(f"Law '{law}' requires opportunity matrix. Computing automatically...")
-        opportunity = extract_opportunities(mass_destination, distance, processes)
+    # Check if opportunities matrix is needed and compute if not provided
+    laws_requiring_opportunities = ["Rad", "RadExt", "Schneider"]
+    if law in laws_requiring_opportunities and opportunities is None:
+        print(f"Law '{law}' requires opportunities matrix. Computing automatically...")
+        opportunities = extract_opportunities(mass_destination, distance, processes)
     
     # Input validation
     _validate_inputs(law, model, mass_origin, mass_destination, distance, 
-                    opportunity, out_trips, in_trips)
+                    opportunities, out_trips, in_trips)
     
     # Set random seed if provided
     if random_seed is not None:
@@ -209,7 +209,8 @@ def run_law_model(
     
     # Setup data tuple
     n = len(mass_origin)
-    data = (n, mass_origin, mass_destination, out_trips, in_trips, distance, opportunity)
+    pij = None
+    data = (n, mass_origin, mass_destination, out_trips, in_trips, distance, opportunities)
     
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
@@ -220,7 +221,7 @@ def run_law_model(
         print(f'Using {num_processes} parallel processes')
         
         with mp.Pool(processes=num_processes) as pool:
-            params = [(data, law, model, beta, repli, return_proba, average) for beta in exponents]
+            params = [(data, pij, law, model, beta, repli, return_proba, average) for beta in exponents]
             results = list(tqdm(pool.imap(_process_exponent, params), 
                               total=len(exponents), desc='Computing exponents'))
         
@@ -268,11 +269,11 @@ def run_law(
     mass_origin: np.ndarray,
     mass_destination: np.ndarray, 
     distance: np.ndarray,
-    opportunity: Optional[np.ndarray] = None,
+    opportunities: Optional[np.ndarray] = None,
     exponent: Union[float, np.ndarray] = 1.0,
     processes: Optional[int] = None,
     random_seed: Optional[int] = None
-) -> Union[np.ndarray, Dict[str, np.ndarray]]:
+) -> Union[np.ndarray, Dict[float, np.ndarray]]:
     r"""
     Estimate the probability matrix $`p_{i,j}`$ according to the trip distribution law.
     
@@ -287,7 +288,7 @@ def run_law(
         Number of inhabitants at destination $`m_j`$
     distance : np.ndarray
         Distance matrix $`d_{i,j}`$ (n x n)
-    opportunity : np.ndarray, optional
+    opportunities : np.ndarray, optional
         Matrix of opportunities $`S_{i,j}`$ (n x n). Required for "Rad", "RadExt", "Schneider".
         If not provided and required, will be computed automatically.
     exponent : float or np.ndarray
@@ -299,21 +300,21 @@ def run_law(
         
     Returns
     -------
-    Union[np.ndarray, Dict[str, np.ndarray]]
+    Union[np.ndarray, Dict[float, np.ndarray]]
         Estimated matrix or matrices of probabilities $`p_{i,j}`$.
         If single exponent: np.ndarray of shape (n, n).
         If multiple exponents: Dict with exponents as keys, arrays as values.
     """
 
-    # Check if opportunity matrix is needed and compute if not provided
-    laws_requiring_opportunity = ["Rad", "RadExt", "Schneider"]
-    if law in laws_requiring_opportunity and opportunity is None:
-        print(f"Law '{law}' requires opportunity matrix. Computing automatically...")
-        opportunity = extract_opportunities(mass_destination, distance, processes)
+    # Check if opportunities matrix is needed and compute if not provided
+    laws_requiring_opportunities = ["Rad", "RadExt", "Schneider"]
+    if law in laws_requiring_opportunities and opportunities is None:
+        print(f"Law '{law}' requires opportunities matrix. Computing automatically...")
+        opportunities = extract_opportunities(mass_destination, distance, processes)
     
     # Input validation
     _validate_inputs(law, "UM", mass_origin, mass_destination, distance, 
-                    opportunity, None, None)
+                    opportunities, None, None)
     
     # Set random seed if provided
     if random_seed is not None:
@@ -333,7 +334,7 @@ def run_law(
         print(f'Using {num_processes} parallel processes')
         
         with mp.Pool(processes=num_processes) as pool:
-            params = [(law, distance, opportunity, mass_origin, mass_destination, beta) for beta in exponents]
+            params = [(law, distance, opportunities, mass_origin, mass_destination, beta) for beta in exponents]
             results = list(tqdm(pool.starmap(_proba, params), 
                               total=len(exponents), desc='Computing exponents'))
         
@@ -348,30 +349,143 @@ def run_law(
         if single_exponent:
             beta = exponents[0]
             print(f'Estimating probabilities for {law} with β = {beta:.2g}')
-            return _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
+            return _proba(law, distance, opportunities, mass_origin, mass_destination, beta)
 
         else:
             print(f'Estimating probabilities for {law}')
             
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
-                output[beta] = _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
+                output[beta] = _proba(law, distance, opportunities, mass_origin, mass_destination, beta)
     print('Done\n')
     
     return output
 
+def run_model(
+    probabilities: Dict[float, np.ndarray],
+    mass_origin: np.ndarray,
+    mass_destination: np.ndarray, 
+    distance: np.ndarray,
+    model: str = "UM",
+    out_trips: Optional[np.ndarray] = None,
+    in_trips: Optional[np.ndarray] = None,
+    average: bool = False,
+    repli: int = 1,
+    processes: Optional[int] = None,
+    random_seed: Optional[int] = None
+) -> Union[np.ndarray, Dict[float, np.ndarray]]:
+    r"""
+    Run trip distribution model simulations with provided probability matrix or matrices $`p_{i,j}`$.
+    
+    Parameters
+    ----------
+    probabilities : Dict[float, np.ndarray]]
+        Estimated matrix or matrices of probabilities $`p_{i,j}`$.
+        Dict with exponent(s) as key(s), arrays as values.
+    mass_origin : np.ndarray
+        Number of inhabitants at origin $`m_i`$
+    mass_destination : np.ndarray  
+        Number of inhabitants at destination $`m_j`$
+    distance : np.ndarray
+        Distance matrix $`d_{i,j}`$ (n x n)
+    model : str, default "UM"
+        Distribution model. One of: "UM", "PCM", "ACM", "DCM"
+    out_trips : np.ndarray, optional
+        Number of out-commuters $`O_i`$. Required for constrained models.
+    in_trips : np.ndarray, optional
+        Number of in-commuters $`D_j`$. Required for ACM and DCM models.
+    average : bool, default False
+        Whether the average mobility flow matrix should be generated instead of the `repli` matrices based on random draws.
+    repli : int, default 1
+        Number of replications. Note that `repli = 1` if `average = True`.
+    processes : int, optional
+        Number of processes for parallel computation. Default: CPU count - 2
+    random_seed : int, optional
+        Random seed for reproducibility
+        
+    Returns
+    -------
+    Union[np.ndarray, Dict[float, np.ndarray]]
+        Simulated trip matrix or matrices $`\tilde{T}_{i,j}`$.
+        If single exponent: np.ndarray of shape (repli, n, n).
+        If multiple exponents: Dict with exponents as keys, arrays as values.
+    """
+    if average:
+        repli = 1
+    # Reconstruct exponent or exponents array from provided probabilities
+    exponent = np.fromiter(probabilities.keys(), dtype=float)
+    exponent.sort()
+    
+    # Input validation
+    _validate_inputs("Rand", model, mass_origin, mass_destination, distance, 
+                    None, out_trips, in_trips)
+    
+    # Set random seed if provided
+    if random_seed is not None:
+        np.random.seed(random_seed)
+    
+    # Handle single vs multiple exponents
+    exponents = np.atleast_1d(exponent)
+    single_exponent = len(exponents) == 1
+    
+    # Setup data tuple
+    n = len(mass_origin)
+    opportunities = None
+    data = (n, mass_origin, mass_destination, out_trips, in_trips, distance, opportunities)
+    
+    # Setup multiprocessing
+    num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
+    
+    if len(exponents) > 1 and num_processes > 1:
+        # Parallel processing for multiple exponents
+        print(f'Running simulations with {model} model ({repli} replications)')
+        print(f'Using {num_processes} parallel processes')
+        
+        with mp.Pool(processes=num_processes) as pool:
+            params = [(data, probabilities[beta], 'Rand', model, beta, repli, False, average) for beta in exponents]
+            results = list(tqdm(pool.imap(_process_exponent, params), 
+                              total=len(exponents), desc='Computing exponents'))
+        
+        # Organize results
+        output = {}
+        for i, beta in enumerate(exponents):
+            output[beta] = results[i]['simulations']
+                
+    else:
+        # Sequential processing
+        output = {}
+        if single_exponent:
+            beta = exponents[0]
+            print(f'Simulating matrix with {model}')
+            params = (data, 'Rand', model, beta, repli, False, average)
+            result = _process_exponent(params)
+            output[beta] = result['simulations']
+        else:
+            print(f'Running simulations with {model} model ({repli} replications)')
+            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
+                params = (data, 'Rand', model, beta, repli, False, average)
+                result = _process_exponent(params)
+                output[beta] = result['simulations']
+    print('Done\n')
+    
+    # Return format based on input
+    if single_exponent:
+        return list(output.values())[0]
+    else:
+        return output
+    
 def gof(
-    sim: Union[np.ndarray, Dict[str, np.ndarray]], 
+    sim: Union[np.ndarray, Dict[float, np.ndarray]], 
     obs: np.ndarray,
     distance: np.ndarray,
     measures: Union[str, List[str]] = "all",
     processes: Optional[int] = None
-) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+) -> Union[pd.DataFrame, Dict[float, pd.DataFrame]]:
     r"""
     Calculate goodness-of-fit measures for simulated vs observed trip matrices.
     
     Parameters
     ----------
-    sim : np.ndarray or Dict[str, np.ndarray]
+    sim : np.ndarray or Dict[float, np.ndarray]
         Simulated trip matrix or matrices $`\tilde{T}_{i,j}`$. If Dict, keys should be exponent values
     obs : np.ndarray
         Observed trip matrix $`T_{i,j}`$ (n x n)
@@ -385,7 +499,7 @@ def gof(
         
     Returns
     -------
-    Union[pd.DataFrame, Dict[str, pd.DataFrame]]
+    Union[pd.DataFrame, Dict[float, pd.DataFrame]]
         If single exponent: DataFrame with measures.
         If multiple exponents: Dict with exponents as keys, DataFrames as values.
     """
@@ -457,7 +571,7 @@ def _process_gof_exponent(params):
 
 
 def _validate_inputs(law, model, mass_origin, mass_destination, distance, 
-                    opportunity, out_trips, in_trips):
+                    opportunities, out_trips, in_trips):
     """Validate input parameters"""
     
     valid_laws = ["GravExp", "NGravExp", "GravPow", "NGravPow", "Schneider", "Rad", "RadExt", "Rand"]
@@ -477,12 +591,12 @@ def _validate_inputs(law, model, mass_origin, mass_destination, distance,
     if distance.shape != (n, n):
         raise _TDLMError(f"distance matrix must be {n}x{n}")
     
-    # Check opportunity matrix for relevant laws
+    # Check opportunities matrix for relevant laws
     if law in ["Rad", "RadExt", "Schneider"]:
-        if opportunity is None:
-            raise _TDLMError(f"opportunity matrix required for law '{law}'")
-        if opportunity.shape != (n, n):
-            raise _TDLMError(f"opportunity matrix must be {n}x{n}")
+        if opportunities is None:
+            raise _TDLMError(f"opportunities matrix required for law '{law}'")
+        if opportunities.shape != (n, n):
+            raise _TDLMError(f"opportunities matrix must be {n}x{n}")
     
     # Check trip constraints for models
     if model in ["PCM", "DCM"] and out_trips is None:
@@ -500,11 +614,12 @@ def _validate_inputs(law, model, mass_origin, mass_destination, distance,
 
 def _process_exponent(params):
     """Process a single exponent value"""
-    data, law, model, beta, repli, return_proba, average = params
+    data, pij, law, model, beta, repli, return_proba, average = params
     n, mi, mj, Oi, Dj, dij, sij = data
     
     # Build the matrix pij according to the law
-    pij = _proba(law, dij, sij, mi, mj, beta)
+    if pij is None:
+        pij = _proba(law, dij, sij, mi, mj, beta)
     
     # Store results
     simulations = []
