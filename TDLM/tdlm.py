@@ -20,8 +20,10 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import multiprocessing as mp
+from multiprocessing import shared_memory
 from typing import Union, Optional, List, Dict
 import warnings
+import pickle
 
 
 class _TDLMError(Exception):
@@ -132,7 +134,7 @@ def run_law_model(
     mass_origin: np.ndarray,
     mass_destination: np.ndarray, 
     distance: np.ndarray,
-    opportunities: Optional[np.ndarray] = None,
+    opportunity: Optional[np.ndarray] = None,
     exponent: Union[float, np.ndarray] = 1.0,
     return_proba: bool = False,
     model: str = "UM",
@@ -157,7 +159,7 @@ def run_law_model(
         Number of inhabitants at destination $`m_j`$
     distance : np.ndarray
         Distance matrix $`d_{i,j}`$ (n x n)
-    opportunities : np.ndarray, optional
+    opportunity : np.ndarray, optional
         Matrix of opportunities $`S_{i,j}`$ (n x n). Required for "Rad", "RadExt", "Schneider".
         If not provided and required, will be computed automatically.
     exponent : float or np.ndarray
@@ -188,16 +190,17 @@ def run_law_model(
     """
     if average:
         repli = 1
-        
+    pij = None
+    
     # Check if opportunities matrix is needed and compute if not provided
     laws_requiring_opportunities = ["Rad", "RadExt", "Schneider"]
-    if law in laws_requiring_opportunities and opportunities is None:
+    if law in laws_requiring_opportunities and opportunity is None:
         print(f"Law '{law}' requires opportunities matrix. Computing automatically...")
-        opportunities = extract_opportunities(mass_destination, distance, processes)
+        opportunity = extract_opportunities(mass_destination, distance, processes)
     
     # Input validation
     _validate_inputs(law, model, mass_origin, mass_destination, distance, 
-                    opportunities, out_trips, in_trips)
+                    opportunity, out_trips, in_trips)
     
     # Set random seed if provided
     if random_seed is not None:
@@ -207,24 +210,40 @@ def run_law_model(
     exponents = np.atleast_1d(exponent)
     single_exponent = len(exponents) == 1
     
-    # Setup data tuple
-    n = len(mass_origin)
-    pij = None
-    data = (n, mass_origin, mass_destination, out_trips, in_trips, distance, opportunities)
-    
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
     
     if len(exponents) > 1 and num_processes > 1:
-        # Parallel processing for multiple exponents
         print(f'Running simulations for {law} with {model} model ({repli} replications)')
         print(f'Using {num_processes} parallel processes')
         
-        with mp.Pool(processes=num_processes) as pool:
-            params = [(data, pij, law, model, beta, repli, return_proba, average) for beta in exponents]
-            results = list(tqdm(pool.imap(_process_exponent, params), 
-                              total=len(exponents), desc='Computing exponents'))
-        
+        shm_list = [] # To track shared memory blocks for cleanup
+        try:
+            # Create shared memory for all large NumPy arrays
+            shm_info = {
+                'mass_origin': _numpy_to_shm(mass_origin, shm_list),
+                'mass_destination': _numpy_to_shm(mass_destination, shm_list),
+                'distance': _numpy_to_shm(distance, shm_list),
+                'opportunity': _numpy_to_shm(opportunity, shm_list),
+                'out_trips': _numpy_to_shm(out_trips, shm_list),
+                'in_trips': _numpy_to_shm(in_trips, shm_list),
+            }
+
+            with mp.Pool(processes=num_processes) as pool:
+                # Prepare parameters for the shared worker function
+                # Pass the dict of shared memory info instead of the raw data
+                params = [(shm_info, pij, law, model, beta, repli, return_proba, average) for beta in exponents]
+                
+                results = list(tqdm(pool.imap(_process_exponent_shared, params),
+                                      total=len(exponents), desc='Computing exponents'))
+        finally:
+            # CRITICAL: Clean up! Unlink all shared memory blocks
+            # This must be in a 'finally' block to run even if the pool fails
+            print("Cleaning up shared memory blocks...")
+            for shm in shm_list:
+                shm.close()
+                shm.unlink() # Destroys the shared memory block
+
         # Organize results
         output = {}
         for i, beta in enumerate(exponents):
@@ -232,44 +251,45 @@ def run_law_model(
                 output[beta] = results[i]
             else:
                 output[beta] = results[i]['simulations']
-                
+    
     else:
         # Sequential processing
+        n = len(mass_origin)
+        data = (n, mass_origin, mass_destination, out_trips, in_trips, distance, opportunity)
+
         output = {}
         if single_exponent:
             beta = exponents[0]
             print(f'Simulating matrix for {law} β = {beta:.2g} with {model}')
             params = (data, pij, law, model, beta, repli, return_proba, average)
-            result = _process_exponent(params)
+            result = _process_exponent(params) # Original function call
             if return_proba:
                 output[beta] = result
             else:
                 output[beta] = result['simulations']
         else:
             print(f'Running simulations for {law} with {model} model ({repli} replications)')
-            
-            
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
                 params = (data, pij, law, model, beta, repli, return_proba, average)
-                result = _process_exponent(params)
+                result = _process_exponent(params) # Original function call
                 if return_proba:
                     output[beta] = result
                 else:
                     output[beta] = result['simulations']
+
     print('Done\n')
-    
-    # Return format based on input
     if single_exponent:
         return list(output.values())[0]
     else:
         return output
+
 
 def run_law(
     law: str,
     mass_origin: np.ndarray,
     mass_destination: np.ndarray, 
     distance: np.ndarray,
-    opportunities: Optional[np.ndarray] = None,
+    opportunity: Optional[np.ndarray] = None,
     exponent: Union[float, np.ndarray] = 1.0,
     processes: Optional[int] = None,
     random_seed: Optional[int] = None
@@ -288,7 +308,7 @@ def run_law(
         Number of inhabitants at destination $`m_j`$
     distance : np.ndarray
         Distance matrix $`d_{i,j}`$ (n x n)
-    opportunities : np.ndarray, optional
+    opportunity : np.ndarray, optional
         Matrix of opportunities $`S_{i,j}`$ (n x n). Required for "Rad", "RadExt", "Schneider".
         If not provided and required, will be computed automatically.
     exponent : float or np.ndarray
@@ -308,13 +328,13 @@ def run_law(
 
     # Check if opportunities matrix is needed and compute if not provided
     laws_requiring_opportunities = ["Rad", "RadExt", "Schneider"]
-    if law in laws_requiring_opportunities and opportunities is None:
+    if law in laws_requiring_opportunities and opportunity is None:
         print(f"Law '{law}' requires opportunities matrix. Computing automatically...")
-        opportunities = extract_opportunities(mass_destination, distance, processes)
+        opportunity = extract_opportunities(mass_destination, distance, processes)
     
     # Input validation
     _validate_inputs(law, "UM", mass_origin, mass_destination, distance, 
-                    opportunities, None, None)
+                    opportunity, None, None)
     
     # Set random seed if provided
     if random_seed is not None:
@@ -334,7 +354,7 @@ def run_law(
         print(f'Using {num_processes} parallel processes')
         
         with mp.Pool(processes=num_processes) as pool:
-            params = [(law, distance, opportunities, mass_origin, mass_destination, beta) for beta in exponents]
+            params = [(law, distance, opportunity, mass_origin, mass_destination, beta) for beta in exponents]
             results = list(tqdm(pool.starmap(_proba, params), 
                               total=len(exponents), desc='Computing exponents'))
         
@@ -349,13 +369,13 @@ def run_law(
         if single_exponent:
             beta = exponents[0]
             print(f'Estimating probabilities for {law} with β = {beta:.2g}')
-            return _proba(law, distance, opportunities, mass_origin, mass_destination, beta)
+            return _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
 
         else:
             print(f'Estimating probabilities for {law}')
             
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
-                output[beta] = _proba(law, distance, opportunities, mass_origin, mass_destination, beta)
+                output[beta] = _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
     print('Done\n')
     
     return output
@@ -427,11 +447,9 @@ def run_model(
     exponents = np.atleast_1d(exponent)
     single_exponent = len(exponents) == 1
     
-    # Setup data tuple
-    n = len(mass_origin)
-    opportunities = None
-    data = (n, mass_origin, mass_destination, out_trips, in_trips, distance, opportunities)
-    
+    opportunity = None
+    return_proba = False
+    law = None
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
     
@@ -439,30 +457,54 @@ def run_model(
         # Parallel processing for multiple exponents
         print(f'Running simulations with {model} model ({repli} replications)')
         print(f'Using {num_processes} parallel processes')
-        
-        with mp.Pool(processes=num_processes) as pool:
-            params = [(data, probabilities[beta], 'Rand', model, beta, repli, False, average) for beta in exponents]
-            results = list(tqdm(pool.imap(_process_exponent, params), 
-                              total=len(exponents), desc='Computing exponents'))
-        
+        shm_list = [] # To track shared memory blocks for cleanup
+        try:
+            # Create shared memory for all large NumPy arrays
+            shm_info = {
+                'mass_origin': _numpy_to_shm(mass_origin, shm_list),
+                'mass_destination': _numpy_to_shm(mass_destination, shm_list),
+                'distance': _numpy_to_shm(distance, shm_list),
+                'opportunity': _numpy_to_shm(opportunity, shm_list),
+                'out_trips': _numpy_to_shm(out_trips, shm_list),
+                'in_trips': _numpy_to_shm(in_trips, shm_list),
+            }
+            
+            with mp.Pool(processes=num_processes) as pool:
+                # Prepare parameters for the shared worker function
+                # Pass the dict of shared memory info instead of the raw data
+                params = [(shm_info, probabilities[beta], law, model, beta, repli, return_proba, average) for beta in exponents]
+                
+                results = list(tqdm(pool.imap(_process_exponent_shared, params),
+                                      total=len(exponents), desc='Computing exponents'))
+             
+        finally:
+            # CRITICAL: Clean up! Unlink all shared memory blocks
+            # This must be in a 'finally' block to run even if the pool fails
+            print("Cleaning up shared memory blocks...")
+            for shm in shm_list:
+                shm.close()
+                shm.unlink() # Destroys the shared memory block
         # Organize results
         output = {}
         for i, beta in enumerate(exponents):
             output[beta] = results[i]['simulations']
-                
+            
     else:
         # Sequential processing
+        n = len(mass_origin)
+        data = (n, mass_origin, mass_destination, out_trips, in_trips, distance, opportunity)
+
         output = {}
         if single_exponent:
             beta = exponents[0]
             print(f'Simulating matrix with {model}')
-            params = (data, probabilities[beta], 'Rand', model, beta, repli, False, average)
+            params = (data, probabilities[beta], law, model, beta, repli, return_proba, average)
             result = _process_exponent(params)
             output[beta] = result['simulations']
         else:
             print(f'Running simulations with {model} model ({repli} replications)')
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
-                params = (data, probabilities[beta], 'Rand', model, beta, repli, False, average)
+                params = (data, probabilities[beta], law, model, beta, repli, return_proba, average)
                 result = _process_exponent(params)
                 output[beta] = result['simulations']
     print('Done\n')
@@ -528,12 +570,29 @@ def gof(
             print(f'Calculating GOF measures for {len(exponents)} exponents')
             print(f'Using {num_processes} parallel processes')
             
-            with mp.Pool(processes=num_processes) as pool:
-                params = [(exponent, sim_matrices, obs, distance, selected_measures) 
-                         for exponent, sim_matrices in sim.items()]
-                results = list(tqdm(pool.imap(_process_gof_exponent, params), 
+            shm_list = [] # To track shared memory blocks for cleanup
+            try:
+                # Create shared memory for all large NumPy arrays
+                shm_info = {
+                    'obs': _numpy_to_shm(obs, shm_list),
+                    'distance': _numpy_to_shm(distance, shm_list),
+                }
+                
+                with mp.Pool(processes=num_processes) as pool:
+                    # Prepare parameters for the new shared worker function
+                    # We now pass the dict of shared memory info instead of the raw data
+                    params = [(shm_info, sim[exponent], selected_measures) for exponent in exponents]
+                    
+                    results = list(tqdm(pool.imap(_calculate_gof_shared, params), 
                                   total=len(exponents), desc='Computing GOF measures'))
-            
+            finally:
+                # CRITICAL: Clean up! Unlink all shared memory blocks
+                # This must be in a 'finally' block to run even if the pool fails
+                print("Cleaning up shared memory blocks...")
+                for shm in shm_list:
+                    shm.close()
+                    shm.unlink() # Destroys the shared memory block
+                    
             # Organize results
             output = {}
             for i, exponent in enumerate(exponents):
@@ -541,37 +600,40 @@ def gof(
             
             print('Done\n')
             return output
+        
         else:
             # Sequential processing
             results = {}
             if single_simulation:
                 exponent = exponents[0]
                 print(f'Calculating GOF measures for exponent {exponent}')
-                results[exponent] = _calculate_gof(sim[exponent], obs, distance, selected_measures)
+                params = (sim[exponent], obs, distance, selected_measures)
+                results[exponent] = _calculate_gof(params)
             else:
                 print(f'Calculating GOF measures for {len(exponents)} exponents')
                 for exponent in tqdm(exponents, desc='Computing GOF measures'):
-                    results[exponent] = _calculate_gof(sim[exponent], obs, distance, selected_measures)
+                    params = (sim[exponent], obs, distance, selected_measures)
+                    results[exponent] = _calculate_gof(params)
             
             print('Done\n')
             return results
     else:
         # Single simulation matrix
         print('Calculating GOF measures')
-        result = _calculate_gof(sim, obs, distance, selected_measures)
+        result = _calculate_gof((sim, obs, distance, selected_measures))
         print('Done\n')
         return result
 
 
-def _process_gof_exponent(params):
-    """Process GOF calculation for a single exponent"""
-    exponent, sim_matrices, obs, distance, selected_measures = params
-    return _calculate_gof(sim_matrices, obs, distance, selected_measures)
+# def _process_gof_exponent(params):
+#     """Process GOF calculation for a single exponent"""
+#     exponent, sim_matrices, obs, distance, selected_measures = params
+#     return _calculate_gof(sim_matrices, obs, distance, selected_measures)
 
 
 
 def _validate_inputs(law, model, mass_origin, mass_destination, distance, 
-                    opportunities, out_trips, in_trips):
+                    opportunity, out_trips, in_trips):
     """Validate input parameters"""
     
     valid_laws = ["GravExp", "NGravExp", "GravPow", "NGravPow", "Schneider", "Rad", "RadExt", "Rand"]
@@ -593,9 +655,9 @@ def _validate_inputs(law, model, mass_origin, mass_destination, distance,
     
     # Check opportunities matrix for relevant laws
     if law in ["Rad", "RadExt", "Schneider"]:
-        if opportunities is None:
+        if opportunity is None:
             raise _TDLMError(f"opportunities matrix required for law '{law}'")
-        if opportunities.shape != (n, n):
+        if opportunity.shape != (n, n):
             raise _TDLMError(f"opportunities matrix must be {n}x{n}")
     
     # Check trip constraints for models
@@ -611,6 +673,84 @@ def _validate_inputs(law, model, mass_origin, mass_destination, distance,
     if in_trips is not None and len(in_trips) != n:
         raise _TDLMError("in_trips must have same length as mass arrays")
 
+def _numpy_to_shm(arr, shm_list):
+    """Copies a NumPy array into a new shared memory block."""
+    if arr is None:
+        return None
+    # Create a shared memory block with the exact size of the array
+    shm = shared_memory.SharedMemory(create=True, size=arr.nbytes)
+    # Create a NumPy array that uses the shared memory buffer
+    shm_arr = np.ndarray(arr.shape, dtype=arr.dtype, buffer=shm.buf)
+    # Copy the data from the original array to the shared array
+    shm_arr[:] = arr[:]
+    # Keep track of the shm object for cleanup in the main process
+    shm_list.append(shm)
+    # Return the metadata needed to reconstruct the array in the worker
+    return (shm.name, arr.shape, arr.dtype)
+
+def _shm_to_numpy(shm_meta):
+    """Reconstructs a NumPy array from shared memory metadata in a worker."""
+    if shm_meta is None:
+        return None, None
+    shm_name, shape, dtype = shm_meta
+    # Attach to the existing shared memory block by name
+    shm = shared_memory.SharedMemory(name=shm_name)
+    # Create a NumPy array that points to the buffer, no data is copied
+    arr = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
+    return arr, shm
+
+def _process_exponent_shared(param):
+    """
+    Worker process for a single exponent that uses data from shared memory.
+    """
+    shm_info, pij, law, model, beta, repli, return_proba, average = param
+    attached_shms = []
+    try:
+        # Reconstruct all necessary arrays from shared memory metadata
+        mass_origin, shm_mo = _shm_to_numpy(shm_info['mass_origin'])
+        mass_destination, shm_md = _shm_to_numpy(shm_info['mass_destination'])
+        distance, shm_d = _shm_to_numpy(shm_info['distance'])
+        opportunity, shm_o = _shm_to_numpy(shm_info['opportunity'])
+        out_trips, shm_ot = _shm_to_numpy(shm_info['out_trips'])
+        in_trips, shm_it = _shm_to_numpy(shm_info['in_trips'])
+
+        # Keep track of all attached blocks to ensure they are closed
+        attached_shms = [s for s in [shm_mo, shm_md, shm_d, shm_o, shm_ot, shm_it] if s is not None]
+
+        n = len(mass_origin)
+        
+        if pij is None:
+            # Build the matrix pij according to the law
+            pij = _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
+            
+        simulations = []
+        for r in range(repli):
+            S = np.zeros((n, n))
+            if model == "UM":
+                S = _UM(pij, out_trips, average)
+            elif model == "PCM":
+                S = _PCM(pij, out_trips, average)
+            elif model == "ACM":
+                S = _ACM(pij, in_trips, average)
+            elif model == "DCM":
+                S = _DCM(pij, out_trips, in_trips, 50, 0.01, average)
+            simulations.append(S)
+
+        simulations = np.array(simulations)
+
+        if return_proba:
+            sumpij = np.sum(pij)
+            return {
+                'simulations': simulations,
+                'probabilities': pij / sumpij if sumpij > 0 else pij
+            }
+        else:
+            return {'simulations': simulations}
+
+    finally:
+        # CRITICAL: Each worker must close its connection to the shared memory blocks
+        for shm in attached_shms:
+            shm.close()
 
 def _process_exponent(params):
     """Process a single exponent value"""
@@ -654,9 +794,9 @@ def _process_exponent(params):
         return {'simulations': simulations}
 
 
-def _calculate_gof(sim_matrices, obs, distance, measures):
+def _calculate_gof(params):
     """Calculate goodness-of-fit measures"""
-    
+    sim_matrices, obs, distance, measures = params
     # Ensure sim_matrices is 3D (replications, n, n)
     if sim_matrices.ndim == 2:
         sim_matrices = sim_matrices[np.newaxis, ...]
@@ -734,8 +874,99 @@ def _calculate_gof(sim_matrices, obs, distance, measures):
     
     return pd.DataFrame(results)
 
+def _calculate_gof_shared(params):
+    """Calculate goodness-of-fit measures"""
+    shm_info, sim_matrices, measures = params
+    attached_shms = []
+    try:
+        # Reconstruct all necessary arrays from shared memory metadata
+        obs, shm_obs = _shm_to_numpy(shm_info['obs'])
+        distance, shm_d = _shm_to_numpy(shm_info['distance'])
+        # Keep track of all attached blocks to ensure they are closed
+        attached_shms = [s for s in [shm_obs, shm_d] if s is not None]
 
-# Import the utility functions from the original scripts
+        # Ensure sim_matrices is 3D (replications, n, n)
+        if sim_matrices.ndim == 2:
+            sim_matrices = sim_matrices[np.newaxis, ...]
+        
+        repli, n, _ = sim_matrices.shape
+        
+        # Prepare observed data
+        pobs = (obs / obs.sum()).flatten()
+        nb = np.sum(obs)
+        T_range = np.max(obs) - np.min(obs)
+        
+        # Calculate distance indices for CPCd
+        indices = np.floor(distance / 2).astype(int).flatten()
+        max_index = indices.max() + 1
+        CDD_R = np.bincount(indices, weights=obs.flatten(), minlength=max_index)
+        
+        results = []
+        
+        for r in range(repli):
+            S = sim_matrices[r]
+            result_dict = {"Replication": r}
+            
+            if "CPC" in measures:
+                # CPC - Common Part of Commuters
+                mask = (obs != 0) * (S != 0)
+                cpc = np.minimum(obs[mask], S[mask]).sum() / nb if nb > 0 else 0
+                result_dict["CPC"] = cpc
+            
+            if "CPL" in measures:
+                # CPL - Common Part of Links
+                nbNL = ((obs == 0) * (S != 0)).sum()  # Number of new links
+                nbML = ((obs != 0) * (S == 0)).sum()  # Number of missing links
+                nbCL = ((obs != 0) * (S != 0)).sum()  # Number of common links
+                cpl = 2 * nbCL / (nbNL + 2 * nbCL + nbML) if (nbNL + 2 * nbCL + nbML) > 0 else 0
+                result_dict["CPL"] = cpl
+            
+            if "CPCd" in measures:
+                # CPCd - Common Part of Commuters by distance
+                CDD_S = np.bincount(indices, weights=S.flatten(), minlength=max_index)
+                cpcd = (np.abs(CDD_S - CDD_R) / nb).sum() if nb > 0 else 0
+                cpcd = 1 - 0.5 * cpcd
+                result_dict["CPCd"] = cpcd
+            
+            if "KS_stat" in measures or "KS_pval" in measures:
+                # KS - Kolmogorov-Smirnov test
+                ks_statistic, ks_pvalue = _ks_weighted(
+                    data1=distance.flatten(), 
+                    wei1=obs.flatten(), 
+                    wei2=S.flatten()
+                )
+                if "KS_stat" in measures:
+                    result_dict["KS_stat"] = ks_statistic
+                if "KS_pval" in measures:
+                    result_dict["KS_pval"] = ks_pvalue
+            
+            if "KL_div" in measures:
+                # KL - Kullback-Leibler divergence
+                ppred = (S / S.sum()).flatten() if S.sum() > 0 else S.flatten()
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    kl_div_array = pobs * np.log(pobs / ppred)
+                    kl_div = np.nan_to_num(kl_div_array, nan=0., posinf=0., neginf=0.).sum()
+                result_dict["KL_div"] = kl_div
+            
+            if "RMSE" in measures:
+                # NRMSE - Normalized Root Mean Square Error
+                if T_range > 0 and obs.sum() > 0:
+                    mse = np.sum((obs - S) ** 2) / obs.sum()
+                    nrmse = np.sqrt(mse)
+                else:
+                    nrmse = 0
+                result_dict["RMSE"] = nrmse
+            
+            results.append(result_dict)
+        
+        return pd.DataFrame(results)
+    
+    finally:
+        # CRITICAL: Each worker must close its connection to the shared memory blocks
+        for shm in attached_shms:
+            shm.close()
+            
 def _proba(law, dij, sij, mi, mj, beta):
     """Generate the matrix pij according to the law"""
     n = len(mi)

@@ -101,7 +101,7 @@ class TestTDLM:
                 mass_origin=self.mi,
                 mass_destination=self.mj,
                 distance=self.dij,
-                opportunities=self.sij,
+                opportunity=self.sij,
                 exponent=0.5,
                 model='UM',
                 out_trips=self.Oi,
@@ -381,7 +381,7 @@ class TestTDLM:
                 mass_origin=self.mi,
                 mass_destination=self.mj,
                 distance=self.dij,
-                opportunities=self.sij,
+                opportunity=self.sij,
                 exponent=0.5
             )
             assert isinstance(result, np.ndarray)
