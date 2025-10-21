@@ -53,30 +53,20 @@ model = 'DCM'     # Doubly Constrained Model
 # Test range of exponent values
 exponent = np.arange(0.01, 0.15, 0.005).round(3)
 
-# Run the simulation
-results = tdlm.run_law_model(
+# Run the simulation and metrics all at once
+gof_results = tdlm.run_law_model_gof(
     law=law,
     mass_origin=mi,
     mass_destination=mj,
     distance=dij,
+    obs = Tij_observed,
     opportunity=None,        # Not needed for this law
     exponent=exponent,
-    return_proba=False,
     model=model,
     out_trips=Oi,
     in_trips=Dj,
-    repli=5,               # Number of replications
+    repli=100,               # Number of replications
     random_seed=42          # For reproducibility
-)
-
-print("Calculating goodness-of-fit measures...")
-
-# Calculate goodness-of-fit
-gof_results = tdlm.gof(
-    sim=results,
-    obs=Tij_observed,
-    distance=dij,
-    measures="all"
 )
 
 # Process results for plotting

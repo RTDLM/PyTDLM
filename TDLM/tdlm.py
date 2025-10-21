@@ -256,13 +256,145 @@ def run_optimization(
             params = [law, model, measure, mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs, average, repli, processes]
             res = minimize_scalar(_single_metric_average, args=(params))
             if res.success:
-                result_dict['β'] = res.x
+                result_dict['Exponent'] = res.x
             else:
-                result_dict['β'] = np.nan
+                result_dict['Exponent'] = np.nan
             results.append(result_dict)
     
     return pd.DataFrame(results)
+
+def run_law_model_gof(
+    law: str,
+    mass_origin: np.ndarray,
+    mass_destination: np.ndarray, 
+    distance: np.ndarray,
+    obs: np.ndarray,
+    opportunity: Optional[np.ndarray] = None,
+    exponent: Union[float, np.ndarray] = 1.0,
+    model: str = "UM",
+    out_trips: Optional[np.ndarray] = None,
+    in_trips: Optional[np.ndarray] = None,
+    average: bool = False,
+    repli: int = 1,
+    measures: Union[str, List[str]] = "all",
+    processes: Optional[int] = None,
+    random_seed: Optional[int] = None
+) -> Union[pd.DataFrame, Dict[float, pd.DataFrame]]:
+    r"""
+    Run trip distribution law and model simulations, and compute the goodness-of-fit measures, all in one go.
     
+    Parameters
+    ----------
+    law : str
+        Trip distribution law. One of: "GravExp", "NGravExp", "GravPow", 
+        "NGravPow", "Schneider", "Rad", "RadExt", "Rand"
+    mass_origin : np.ndarray
+        Number of inhabitants at origin $`m_i`$
+    mass_destination : np.ndarray  
+        Number of inhabitants at destination $`m_j`$
+    distance : np.ndarray
+        Distance matrix $`d_{i,j}`$ (n x n)
+    obs : np.ndarray
+        Observed trip matrix $`T_{i,j}`$ (n x n)
+    opportunity : np.ndarray, optional
+        Matrix of opportunities $`S_{i,j}`$ (n x n). Required for "Rad", "RadExt", "Schneider".
+        If not provided and required, will be computed automatically.
+    exponent : float or np.ndarray
+        Exponent parameter(s) for the distribution law
+    model : str, default "UM"
+        Distribution model. One of: "UM", "PCM", "ACM", "DCM"
+    out_trips : np.ndarray, optional
+        Number of out-commuters $`O_i`$. Required for constrained models.
+    in_trips : np.ndarray, optional
+        Number of in-commuters $`D_j`$. Required for ACM and DCM models.
+    average : bool, default False
+        Whether the average mobility flow matrix should be generated instead of the `repli` matrices based on random draws.
+    repli : int, default 1
+        Number of replications. Note that `repli = 1` if `average = True`.
+    measures : str or List[str], default "all"
+        Measures to calculate. "all" or subset of:
+        ["CPC", "CPL", "CPCd", "KS_stat", "KS_pval", "KL_div", "RMSE"]
+    processes : int, optional
+        Number of processes for parallel computation. Default: CPU count - 2
+    random_seed : int, optional
+        Random seed for reproducibility
+        
+    Returns
+    -------
+    Union[pd.DataFrame, Dict[float, pd.DataFrame]]
+        If single exponent: DataFrame with measures.
+        If multiple exponents: Dict with exponents as keys, DataFrames as values.
+    """
+    if average:
+        repli = 1
+    pij = None
+    
+    # Check if opportunities matrix is needed and compute if not provided
+    laws_requiring_opportunities = ["Rad", "RadExt", "Schneider"]
+    if law in laws_requiring_opportunities and opportunity is None:
+        print(f"Law '{law}' requires opportunities matrix. Computing automatically...")
+        opportunity = extract_opportunities(mass_destination, distance, processes)
+    
+    # Input validation
+    _validate_inputs(law, model, mass_origin, mass_destination, distance, 
+                    opportunity, out_trips, in_trips)
+    # Available measures
+    all_measures = ["CPC", "CPL", "CPCd", "KS_stat", "KS_pval", "KL_div", "RMSE"]
+    
+    if measures == "all":
+        selected_measures = all_measures
+    else:
+        selected_measures = measures if isinstance(measures, list) else [measures]
+        invalid = set(selected_measures) - set(all_measures)
+        if invalid:
+            raise _TDLMError(f"Invalid measures: {invalid}. Available: {['all']+all_measures}")
+
+    # Set random seed if provided
+    if random_seed is not None:
+        np.random.seed(random_seed)
+    
+    # Handle single vs multiple exponents
+    exponents = np.atleast_1d(exponent)
+    single_exponent = len(exponents) == 1
+    
+    # Setup multiprocessing
+    num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
+    data = (mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs)
+    
+    if len(exponents) > 1 and num_processes > 1:
+        # Parallel processing for multiple exponents
+        print(f'Running simulations and GOF for {law} with {model} model ({repli} replications)')
+        print(f'Using {num_processes} parallel processes')
+        
+        with mp.Pool(processes=num_processes) as pool:
+            
+            params = [(data, pij, law, model, beta, repli, average, selected_measures) for beta in exponents]
+            
+            results = list(tqdm(pool.imap(_process_exponent_gof, params),
+                                total=len(exponents), desc='Computing exponents'))
+        
+        # Organize results
+        output = {}
+        for i, exponent in enumerate(exponents):
+            output[exponent] = results[i]
+        print('Done\n')
+        return output
+    else:
+        # Sequential processing
+        if single_exponent:
+            beta = exponents[0]
+            print(f'Simulating matrix and GOF for {law} β = {beta:.2g} with {model}')
+            params = (data, pij, law, model, beta, repli, average, selected_measures)
+            result = _process_exponent_gof(params)
+            return result
+        else:
+            results = {}
+            print(f'Running simulations and GOF for {law} with {model} model ({repli} replications)')
+            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
+                params = (data, pij, law, model, beta, repli, average, selected_measures)
+                results[beta] = _process_exponent_gof(params)
+            return results
+        
 def run_law_model(
     law: str,
     mass_origin: np.ndarray,
@@ -714,7 +846,7 @@ def gof(
                 
                 with mp.Pool(processes=num_processes) as pool:
                     # Prepare parameters for the new shared worker function
-                    # We now pass the dict of shared memory info instead of the raw data
+                    # Pass the dict of shared memory info instead of the raw data
                     params = [(shm_info, sim[exponent], selected_measures) for exponent in exponents]
                     
                     results = list(tqdm(pool.imap(_calculate_gof_shared, params), 
@@ -757,14 +889,6 @@ def gof(
         result = _calculate_gof((sim, obs, distance, selected_measures))
         print('Done\n')
         return result
-
-
-# def _process_gof_exponent(params):
-#     """Process GOF calculation for a single exponent"""
-#     exponent, sim_matrices, obs, distance, selected_measures = params
-#     return _calculate_gof(sim_matrices, obs, distance, selected_measures)
-
-
 
 def _validate_inputs(law, model, mass_origin, mass_destination, distance, 
                     opportunity, out_trips, in_trips):
@@ -926,6 +1050,97 @@ def _process_exponent(params):
         }
     else:
         return {'simulations': simulations}
+
+def _process_exponent_gof(params):
+    """Run simulations and process GOF calculation for a single exponent"""
+    data, pij, law, model, beta, repli, average, measures = params
+    mi, mj, dij, sij, Oi, Dj, Tij = data
+    n = len(mi)
+    
+    if pij is None:
+        pij = _proba(law, dij, sij, mi, mj, beta)
+    
+    # Prepare observed data
+    pobs = (Tij / Tij.sum()).flatten()
+    nb = np.sum(Tij)
+    T_range = np.max(Tij) - np.min(Tij)
+    
+    # Calculate distance indices for CPCd
+    indices = np.floor(dij / 2).astype(int).flatten()
+    max_index = indices.max() + 1
+    CDD_R = np.bincount(indices, weights=Tij.flatten(), minlength=max_index)
+    
+    results = []
+    for r in range(repli):
+        # Simulated OD
+        S = np.zeros((n, n))
+
+        # Network generation according to the constrained model
+        if model == "UM":  # Unconstrained model
+            S = _UM(pij, Oi, average)
+        elif model == "PCM":  # Production constrained model
+            S = _PCM(pij, Oi, average)
+        elif model == "ACM":  # Attraction constrained model
+            S = _ACM(pij, Dj, average)
+        elif model == "DCM":  # Doubly constrained model
+            S = _DCM(pij, Oi, Dj, 50, 0.01, average)
+        
+        result_dict = {"Replication": r}
+        
+        if "CPC" in measures:
+            # CPC - Common Part of Commuters
+            mask = (Tij != 0) * (S != 0)
+            cpc = np.minimum(Tij[mask], S[mask]).sum() / nb if nb > 0 else 0
+            result_dict["CPC"] = cpc
+        
+        if "CPL" in measures:
+            # CPL - Common Part of Links
+            nbNL = ((Tij == 0) * (S != 0)).sum()  # Number of new links
+            nbML = ((Tij != 0) * (S == 0)).sum()  # Number of missing links
+            nbCL = ((Tij != 0) * (S != 0)).sum()  # Number of common links
+            cpl = 2 * nbCL / (nbNL + 2 * nbCL + nbML) if (nbNL + 2 * nbCL + nbML) > 0 else 0
+            result_dict["CPL"] = cpl
+        
+        if "CPCd" in measures:
+            # CPCd - Common Part of Commuters by distance
+            CDD_S = np.bincount(indices, weights=S.flatten(), minlength=max_index)
+            cpcd = (np.abs(CDD_S - CDD_R) / nb).sum() if nb > 0 else 0
+            cpcd = 1 - 0.5 * cpcd
+            result_dict["CPCd"] = cpcd
+        
+        if "KS_stat" in measures or "KS_pval" in measures:
+            # KS - Kolmogorov-Smirnov test
+            ks_statistic, ks_pvalue = _ks_weighted(
+                data1=dij.flatten(), 
+                wei1=Tij.flatten(), 
+                wei2=S.flatten()
+            )
+            if "KS_stat" in measures:
+                result_dict["KS_stat"] = ks_statistic
+            if "KS_pval" in measures:
+                result_dict["KS_pval"] = ks_pvalue
+        
+        if "KL_div" in measures:
+            # KL - Kullback-Leibler divergence
+            ppred = (S / S.sum()).flatten() if S.sum() > 0 else S.flatten()
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                kl_div_array = pobs * np.log(pobs / ppred)
+                kl_div = np.nan_to_num(kl_div_array, nan=0., posinf=0., neginf=0.).sum()
+            result_dict["KL_div"] = kl_div
+        
+        if "RMSE" in measures:
+            # NRMSE - Normalized Root Mean Square Error
+            if T_range > 0 and Tij.sum() > 0:
+                mse = np.sum((Tij - S) ** 2) / Tij.sum()
+                nrmse = np.sqrt(mse)
+            else:
+                nrmse = 0
+            result_dict["RMSE"] = nrmse
+        
+        results.append(result_dict)
+        
+    return pd.DataFrame(results)
 
 
 def _calculate_gof(params):
