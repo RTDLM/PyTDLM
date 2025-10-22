@@ -47,6 +47,7 @@ Tij_df = pd.read_csv(data_path + "OD.csv", sep=";", header=0)
 Tij_observed = Tij_df.values.astype(float)
 
 print("Running TDLM simulation...")
+start = perf_counter()
 
 # Define law and model
 law = 'NGravExp'  # Normalized Gravity with Exponential decay
