@@ -9,6 +9,8 @@ import gzip
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from time import perf_counter
+from datetime import timedelta
 from TDLM import tdlm
 
 data_path = os.getcwd() + os.sep + "data_US" + os.sep
@@ -65,10 +67,10 @@ gof_results = tdlm.run_law_model_gof(
     model=model,
     out_trips=Oi,
     in_trips=Dj,
-    repli=100,               # Number of replications
+    repli=5,               # Number of replications
     random_seed=42          # For reproducibility
 )
-
+print(f'Done in {timedelta(seconds=perf_counter() - start)}')
 # Process results for plotting
 print("Processing results...")
 
@@ -131,11 +133,11 @@ best_exponent = exponent[best_exp_idx]
 print("\nResults Summary:")
 print(f"Law: {law}")
 print(f"Model: {model}")
-print(f"Best exponent (highest CPC): {best_exponent:.3g}")
+print(f"Best exponent (highest CPC): β = {best_exponent:.3g}")
 print(f"Best CPC value: {cpc_means[best_exp_idx]:.3f}")
 
 # Show sample simulation with best exponent
-print(f"\nSample simulation with optimal exponent ({best_exponent}):")
+print(f"\nSample simulation with best exponent (β = {best_exponent}):")
 best_sim = tdlm.run_law_model(
     law=law,
     mass_origin=mi,
@@ -162,3 +164,45 @@ best_sim_gof = tdlm.gof(
 print('Metrics:')
 print(best_sim_gof.to_markdown(index=False))
 
+# Compare with scipy's minize_scalar result
+print('\nDetermining the optimal exponent with respect to CPC maximization')
+start = perf_counter()
+results = tdlm.run_optimization(
+    mass_origin=mi, 
+    mass_destination=mj, 
+    distance=dij, 
+    obs=Tij_observed,
+    law=law,
+    model=model,
+    out_trips=Oi,
+    in_trips=Dj,
+    repli=5,
+    random_seed = 42
+)
+print(f'Done in {timedelta(seconds=perf_counter() -start)}')
+opti_exponent = results.Exponent.values[0]
+print(f"Best exponent (highest CPC): β = {opti_exponent:.3g}")
+
+print(f"\nSample simulation with optimal exponent (β = {opti_exponent}):")
+best_sim = tdlm.run_law_model(
+    law=law,
+    mass_origin=mi,
+    mass_destination=mj,
+    distance=dij,
+    exponent=opti_exponent,
+    model=model,
+    out_trips=Oi,
+    in_trips=Dj,
+    repli=1,
+    return_proba=True,
+    random_seed=42
+)
+
+best_sim_gof = tdlm.gof(
+    sim=best_sim['simulations'],
+    obs=Tij_observed,
+    distance=dij,
+    measures="all"
+)
+print('Metrics:')
+print(best_sim_gof.to_markdown(index=False))

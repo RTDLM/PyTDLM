@@ -25,7 +25,6 @@ from typing import Union, Optional, List, Dict
 import warnings
 from scipy.optimize import minimize_scalar
 
-
 class _TDLMError(Exception):
     """Custom exception for TDLM errors
     :meta private:
@@ -253,7 +252,8 @@ def run_optimization(
     for i, l in enumerate(selected_laws):
         for j, m in enumerate(selected_models):
             result_dict= {'Law':l, 'Model':m}
-            params = [law, model, measure, mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs, average, repli, processes]
+            print(f'Calculating average {measure} for {l} with {m} over {repli} realizations')
+            params = [l, m, measure, mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs, average, repli, processes]
             res = minimize_scalar(_single_metric_average, args=(params))
             if res.success:
                 result_dict['Exponent'] = res.x
@@ -1318,6 +1318,7 @@ def _calculate_gof_shared(params):
 
 def _single_metric_average(exponent, params):
     # Specifying explicit boundaries (0, x) results in minimize_scalar getting stuck on the upper bound x
+    print(f'Trying β = {exponent}')
     if exponent <=0:
         return np.inf
         
@@ -1335,10 +1336,12 @@ def _single_metric_average(exponent, params):
     if repli > 1 and num_processes > 1:
         # Parallel processing for multiple realizations
         with mp.Pool(processes=num_processes) as pool:
-            print(f'Calculating average {measure} over {repli} realizations')
-            print(f'Using {num_processes} parallel processes')
+            # print(f'Calculating average {measure} over {repli} realizations')
+            # print(f'Using {num_processes} parallel processes')
             params = [(model, measure, obs, pij, distance, Oi, Dj, average) for r in range(repli)]
-            results = list(tqdm(pool.imap(_single_metric, params), total=repli, desc='Computing GOF measure'))		
+            # results = list(tqdm(pool.imap(_single_metric, params), total=repli, desc='Computing GOF measure'))		
+            results = list(pool.imap(_single_metric, params))		
+
         return sign * np.mean(results)
     else:
 		# Sequential processing
