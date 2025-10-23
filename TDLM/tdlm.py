@@ -359,20 +359,41 @@ def run_law_model_gof(
     
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
-    data = (mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs)
+    # data = (mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs)
     
     if len(exponents) > 1 and num_processes > 1:
         # Parallel processing for multiple exponents
         print(f'Running simulations and GOF for {law} with {model} model ({repli} replications)')
         print(f'Using {num_processes} parallel processes')
         
-        with mp.Pool(processes=num_processes) as pool:
+        shm_list = [] # To track shared memory blocks for cleanup
+        try:
+            # Create shared memory for all large NumPy arrays
+            shm_info = {
+                'mass_origin': _numpy_to_shm(mass_origin, shm_list),
+                'mass_destination': _numpy_to_shm(mass_destination, shm_list),
+                'distance': _numpy_to_shm(distance, shm_list),
+                'opportunity': _numpy_to_shm(opportunity, shm_list),
+                'out_trips': _numpy_to_shm(out_trips, shm_list),
+                'in_trips': _numpy_to_shm(in_trips, shm_list),
+                'obs': _numpy_to_shm(obs, shm_list)
+            }
             
-            params = [(data, pij, law, model, beta, repli, average, selected_measures) for beta in exponents]
-            
-            results = list(tqdm(pool.imap(_process_exponent_gof, params),
-                                total=len(exponents), desc='Computing exponents'))
-        
+            with mp.Pool(processes=num_processes) as pool:
+                
+                # params = [(data, pij, law, model, beta, repli, average, selected_measures) for beta in exponents]
+                params = [(shm_info, pij, law, model, beta, repli, average, selected_measures) for beta in exponents]
+                
+                results = list(tqdm(pool.imap(_process_exponent_gof_shared, params),
+                                    total=len(exponents), desc='Computing exponents'))
+        finally:
+            # CRITICAL: Clean up! Unlink all shared memory blocks
+            # This must be in a 'finally' block to run even if the pool fails
+            print("Cleaning up shared memory blocks...")
+            for shm in shm_list:
+                shm.close()
+                shm.unlink() # Destroys the shared memory block
+                
         # Organize results
         output = {}
         for i, exponent in enumerate(exponents):
@@ -381,6 +402,7 @@ def run_law_model_gof(
         return output
     else:
         # Sequential processing
+        data = (mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs)
         if single_exponent:
             beta = exponents[0]
             print(f'Simulating matrix and GOF for {law} β = {beta:.2g} with {model}')
@@ -1051,6 +1073,114 @@ def _process_exponent(params):
     else:
         return {'simulations': simulations}
 
+def _process_exponent_gof_shared(params):
+    """Run simulations and process GOF calculation for a single exponent"""
+    shm_info, pij, law, model, beta, repli, average, measures = params
+    attached_shms = []
+    try:
+        # Reconstruct all necessary arrays from shared memory metadata
+        mi, shm_mo = _shm_to_numpy(shm_info['mass_origin'])
+        mj, shm_md = _shm_to_numpy(shm_info['mass_destination'])
+        dij, shm_d = _shm_to_numpy(shm_info['distance'])
+        sij, shm_o = _shm_to_numpy(shm_info['opportunity'])
+        Oi, shm_ot = _shm_to_numpy(shm_info['out_trips'])
+        Dj, shm_it = _shm_to_numpy(shm_info['in_trips'])
+        Tij, shm_ob = _shm_to_numpy(shm_info['obs'])
+        
+        # Keep track of all attached blocks to ensure they are closed
+        attached_shms = [s for s in [shm_mo, shm_md, shm_d, shm_o, shm_ot, shm_it, shm_ob] if s is not None]
+
+        n = len(mi)
+        
+        if pij is None:
+            pij = _proba(law, dij, sij, mi, mj, beta)
+        
+        # Prepare observed data
+        pobs = (Tij / Tij.sum()).flatten()
+        nb = np.sum(Tij)
+        T_range = np.max(Tij) - np.min(Tij)
+        
+        # Calculate distance indices for CPCd
+        indices = np.floor(dij / 2).astype(int).flatten()
+        max_index = indices.max() + 1
+        CDD_R = np.bincount(indices, weights=Tij.flatten(), minlength=max_index)
+        
+        results = []
+        for r in range(repli):
+            # Simulated OD
+            S = np.zeros((n, n))
+    
+            # Network generation according to the constrained model
+            if model == "UM":  # Unconstrained model
+                S = _UM(pij, Oi, average)
+            elif model == "PCM":  # Production constrained model
+                S = _PCM(pij, Oi, average)
+            elif model == "ACM":  # Attraction constrained model
+                S = _ACM(pij, Dj, average)
+            elif model == "DCM":  # Doubly constrained model
+                S = _DCM(pij, Oi, Dj, 50, 0.01, average)
+            
+            result_dict = {"Replication": r}
+            
+            if "CPC" in measures:
+                # CPC - Common Part of Commuters
+                mask = (Tij != 0) * (S != 0)
+                cpc = np.minimum(Tij[mask], S[mask]).sum() / nb if nb > 0 else 0
+                result_dict["CPC"] = cpc
+            
+            if "CPL" in measures:
+                # CPL - Common Part of Links
+                nbNL = ((Tij == 0) * (S != 0)).sum()  # Number of new links
+                nbML = ((Tij != 0) * (S == 0)).sum()  # Number of missing links
+                nbCL = ((Tij != 0) * (S != 0)).sum()  # Number of common links
+                cpl = 2 * nbCL / (nbNL + 2 * nbCL + nbML) if (nbNL + 2 * nbCL + nbML) > 0 else 0
+                result_dict["CPL"] = cpl
+            
+            if "CPCd" in measures:
+                # CPCd - Common Part of Commuters by distance
+                CDD_S = np.bincount(indices, weights=S.flatten(), minlength=max_index)
+                cpcd = (np.abs(CDD_S - CDD_R) / nb).sum() if nb > 0 else 0
+                cpcd = 1 - 0.5 * cpcd
+                result_dict["CPCd"] = cpcd
+            
+            if "KS_stat" in measures or "KS_pval" in measures:
+                # KS - Kolmogorov-Smirnov test
+                ks_statistic, ks_pvalue = _ks_weighted(
+                    data1=dij.flatten(), 
+                    wei1=Tij.flatten(), 
+                    wei2=S.flatten()
+                )
+                if "KS_stat" in measures:
+                    result_dict["KS_stat"] = ks_statistic
+                if "KS_pval" in measures:
+                    result_dict["KS_pval"] = ks_pvalue
+            
+            if "KL_div" in measures:
+                # KL - Kullback-Leibler divergence
+                ppred = (S / S.sum()).flatten() if S.sum() > 0 else S.flatten()
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    kl_div_array = pobs * np.log(pobs / ppred)
+                    kl_div = np.nan_to_num(kl_div_array, nan=0., posinf=0., neginf=0.).sum()
+                result_dict["KL_div"] = kl_div
+            
+            if "RMSE" in measures:
+                # NRMSE - Normalized Root Mean Square Error
+                if T_range > 0 and Tij.sum() > 0:
+                    mse = np.sum((Tij - S) ** 2) / Tij.sum()
+                    nrmse = np.sqrt(mse)
+                else:
+                    nrmse = 0
+                result_dict["RMSE"] = nrmse
+            
+            results.append(result_dict)
+            
+        return pd.DataFrame(results)
+    finally:
+        # CRITICAL: Each worker must close its connection to the shared memory blocks
+        for shm in attached_shms:
+            shm.close()
+
 def _process_exponent_gof(params):
     """Run simulations and process GOF calculation for a single exponent"""
     data, pij, law, model, beta, repli, average, measures = params
@@ -1141,7 +1271,6 @@ def _process_exponent_gof(params):
         results.append(result_dict)
         
     return pd.DataFrame(results)
-
 
 def _calculate_gof(params):
     """Calculate goodness-of-fit measures"""
