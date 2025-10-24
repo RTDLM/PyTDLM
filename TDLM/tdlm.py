@@ -68,7 +68,7 @@ def extract_opportunities(
     print(f'Using {num_processes} parallel processes')
     
     # Prepare arguments for parallel processing
-    args_list = [(i, distance, mass_destination, n) for i in range(n)]
+    args_list = [(i, distance[i,:], mass_destination, n) for i in range(n)]
     
     # Use multiprocessing to compute S matrix rows in parallel
     with mp.Pool(processes=num_processes) as pool:
@@ -86,13 +86,10 @@ def extract_opportunities(
 
 def _process_opportunities_row(args):
     """Process a single row of the opportunities matrix S with complete vectorization."""
-    i, dij, mj, n = args
+    i, distances_i, mj, n = args
     
     # Initialize row
     row_S = np.zeros(n)
-    
-    # Get distances from i to all regions
-    distances_i = dij[i, :]
     
     # Create 2D arrays for the j and l dimensions (n×n)
     j_indices = np.arange(n).reshape(n, 1)  # Column vector
