@@ -31,11 +31,15 @@ class _TDLMError(Exception):
     """
     pass
 
+def _vprint(message, verbose):
+    if verbose:
+        print(message)
 
 def extract_opportunities(
     mass_destination: np.ndarray,
     distance: np.ndarray,
-    processes: Optional[int] = None
+    processes: Optional[int] = None,
+    verbose: bool = True
 ) -> np.ndarray:
     r"""
     Compute the opportunities matrix $`S_{i,j}`$ Number of opportunities located in a circle 
@@ -49,6 +53,8 @@ def extract_opportunities(
         Distance matrix $`d_{i,j}`$ (n x n)
     processes : int, optional
         Number of processes for parallel computation. Default: CPU count - 2
+    verbose : bool, default True
+        Controls the verbosity
         
     Returns
     -------
@@ -61,11 +67,11 @@ def extract_opportunities(
     if distance.shape != (n, n):
         raise _TDLMError(f"distance matrix must be {n}x{n}")
     
-    print(f"Computing opportunities matrix for {n} regions...")
+    _vprint(f"Computing opportunities matrix for {n} regions...", verbose)
     
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
-    print(f'Using {num_processes} parallel processes')
+    _vprint(f'Using {num_processes} parallel processes', verbose)
     
     # Prepare arguments for parallel processing
     args_list = [(i, distance[i,:], mass_destination, n) for i in range(n)]
@@ -73,14 +79,14 @@ def extract_opportunities(
     # Use multiprocessing to compute S matrix rows in parallel
     with mp.Pool(processes=num_processes) as pool:
         results = list(tqdm(pool.imap(_process_opportunities_row, args_list), 
-                           total=n, desc="Computing opportunities"))
+                           total=n, desc="Computing opportunities", disable=not verbose))
     
     # Collect results into S matrix
     S = np.zeros((n, n))
     for i, row_S in results:
         S[i, :] = row_S
     
-    print("Done\n")
+    _vprint("Done\n", verbose)
     return S
 
 
@@ -138,7 +144,8 @@ def run_optimization(
     repli: int = 1,
     measure: str = "CPC",
     processes: Optional[int] = None,
-    random_seed: Optional[int] = None
+    random_seed: Optional[int] = None,
+    verbose: bool = True
 ) -> Union[np.ndarray, Dict[float, np.ndarray]]:
     r"""
     Run trip distribution law and model simulations, compute the goodness-of-fit measures, and determine the optimal exponent with respect to the specified measure.
@@ -176,6 +183,8 @@ def run_optimization(
         Number of processes for parallel computation. Default: CPU count - 2
     random_seed : int, optional
         Random seed for reproducibility
+    verbose : bool, default True
+        Controls the verbosity
         
     Returns
     -------
@@ -202,8 +211,8 @@ def run_optimization(
     require_opportunity = set(selected_laws).intersection(set(laws_requiring_opportunities))
     if require_opportunity:
         if opportunity is None:
-            print(f"Laws {require_opportunity} require opportunities matrix. Computing automatically...")
-            opportunity = extract_opportunities(mass_destination, distance, processes)
+            _vprint(f"Laws {require_opportunity} require opportunities matrix. Computing automatically...", verbose)
+            opportunity = extract_opportunities(mass_destination, distance, processes, verbose)
         if opportunity.shape != (n, n):
             raise _TDLMError(f"opportunities matrix must be {n}x{n}")
             
@@ -249,8 +258,8 @@ def run_optimization(
     for i, l in enumerate(selected_laws):
         for j, m in enumerate(selected_models):
             result_dict= {'Law':l, 'Model':m}
-            print(f'Calculating average {measure} for {l} with {m} over {repli} realizations')
-            params = [l, m, measure, mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs, average, repli, processes]
+            _vprint(f'Calculating average {measure} for {l} with {m} over {repli} realizations', verbose)
+            params = [l, m, measure, mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs, average, repli, processes, verbose]
             res = minimize_scalar(_single_metric_average, args=(params))
             if res.success:
                 result_dict['Exponent'] = res.x
@@ -275,7 +284,8 @@ def run_law_model_gof(
     repli: int = 1,
     measures: Union[str, List[str]] = "all",
     processes: Optional[int] = None,
-    random_seed: Optional[int] = None
+    random_seed: Optional[int] = None,
+    verbose: bool = True
 ) -> Union[pd.DataFrame, Dict[float, pd.DataFrame]]:
     r"""
     Run trip distribution law and model simulations, and compute the goodness-of-fit measures, all in one go.
@@ -315,6 +325,8 @@ def run_law_model_gof(
         Number of processes for parallel computation. Default: CPU count - 2
     random_seed : int, optional
         Random seed for reproducibility
+    verbose : bool, default True
+        Controls the verbosity
         
     Returns
     -------
@@ -329,8 +341,8 @@ def run_law_model_gof(
     # Check if opportunities matrix is needed and compute if not provided
     laws_requiring_opportunities = ["Rad", "RadExt", "Schneider"]
     if law in laws_requiring_opportunities and opportunity is None:
-        print(f"Law '{law}' requires opportunities matrix. Computing automatically...")
-        opportunity = extract_opportunities(mass_destination, distance, processes)
+        _vprint(f"Law '{law}' requires opportunities matrix. Computing automatically...", verbose)
+        opportunity = extract_opportunities(mass_destination, distance, processes, verbose)
     
     # Input validation
     _validate_inputs(law, model, mass_origin, mass_destination, distance, 
@@ -356,12 +368,11 @@ def run_law_model_gof(
     
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
-    # data = (mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs)
     
     if len(exponents) > 1 and num_processes > 1:
         # Parallel processing for multiple exponents
-        print(f'Running simulations and GOF for {law} with {model} model ({repli} replications)')
-        print(f'Using {num_processes} parallel processes')
+        _vprint(f'Running simulations and GOF for {law} with {model} model ({repli} replications)', verbose)
+        _vprint(f'Using {num_processes} parallel processes', verbose)
         
         shm_list = [] # To track shared memory blocks for cleanup
         try:
@@ -377,16 +388,13 @@ def run_law_model_gof(
             }
             
             with mp.Pool(processes=num_processes) as pool:
-                
-                # params = [(data, pij, law, model, beta, repli, average, selected_measures) for beta in exponents]
                 params = [(shm_info, pij, law, model, beta, repli, average, selected_measures) for beta in exponents]
-                
                 results = list(tqdm(pool.imap(_process_exponent_gof_shared, params),
-                                    total=len(exponents), desc='Computing exponents'))
+                                    total=len(exponents), desc='Computing exponents', disable=not verbose))
         finally:
             # CRITICAL: Clean up! Unlink all shared memory blocks
             # This must be in a 'finally' block to run even if the pool fails
-            print("Cleaning up shared memory blocks...")
+            _vprint("Cleaning up shared memory blocks...", verbose)
             for shm in shm_list:
                 shm.close()
                 shm.unlink() # Destroys the shared memory block
@@ -395,21 +403,21 @@ def run_law_model_gof(
         output = {}
         for i, exponent in enumerate(exponents):
             output[exponent] = results[i]
-        print('Done\n')
+        _vprint('Done\n', verbose)
         return output
     else:
         # Sequential processing
         data = (mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs)
         if single_exponent:
             beta = exponents[0]
-            print(f'Simulating matrix and GOF for {law} β = {beta:.2g} with {model}')
+            _vprint(f'Simulating matrix and GOF for {law} β = {beta:.2g} with {model}', verbose)
             params = (data, pij, law, model, beta, repli, average, selected_measures)
             result = _process_exponent_gof(params)
             return result
         else:
             results = {}
-            print(f'Running simulations and GOF for {law} with {model} model ({repli} replications)')
-            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
+            _vprint(f'Running simulations and GOF for {law} with {model} model ({repli} replications)', verbose)
+            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
                 params = (data, pij, law, model, beta, repli, average, selected_measures)
                 results[beta] = _process_exponent_gof(params)
             return results
@@ -428,7 +436,8 @@ def run_law_model(
     average: bool = False,
     repli: int = 1,
     processes: Optional[int] = None,
-    random_seed: Optional[int] = None
+    random_seed: Optional[int] = None,
+    verbose: bool = True    
 ) -> Union[np.ndarray, Dict[float, np.ndarray]]:
     r"""
     Run trip distribution law and model simulations.
@@ -465,6 +474,8 @@ def run_law_model(
         Number of processes for parallel computation. Default: CPU count - 2
     random_seed : int, optional
         Random seed for reproducibility
+    verbose : bool, default True
+        Controls the verbosity
         
     Returns
     -------
@@ -480,8 +491,8 @@ def run_law_model(
     # Check if opportunities matrix is needed and compute if not provided
     laws_requiring_opportunities = ["Rad", "RadExt", "Schneider"]
     if law in laws_requiring_opportunities and opportunity is None:
-        print(f"Law '{law}' requires opportunities matrix. Computing automatically...")
-        opportunity = extract_opportunities(mass_destination, distance, processes)
+        _vprint(f"Law '{law}' requires opportunities matrix. Computing automatically...", verbose)
+        opportunity = extract_opportunities(mass_destination, distance, processes, verbose)
     
     # Input validation
     _validate_inputs(law, model, mass_origin, mass_destination, distance, 
@@ -499,8 +510,8 @@ def run_law_model(
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
     
     if len(exponents) > 1 and num_processes > 1:
-        print(f'Running simulations for {law} with {model} model ({repli} replications)')
-        print(f'Using {num_processes} parallel processes')
+        _vprint(f'Running simulations for {law} with {model} model ({repli} replications)', verbose)
+        _vprint(f'Using {num_processes} parallel processes', verbose)
         
         shm_list = [] # To track shared memory blocks for cleanup
         try:
@@ -520,11 +531,11 @@ def run_law_model(
                 params = [(shm_info, pij, law, model, beta, repli, return_proba, average) for beta in exponents]
                 
                 results = list(tqdm(pool.imap(_process_exponent_shared, params),
-                                      total=len(exponents), desc='Computing exponents'))
+                                      total=len(exponents), desc='Computing exponents', disable=not verbose))
         finally:
             # CRITICAL: Clean up! Unlink all shared memory blocks
             # This must be in a 'finally' block to run even if the pool fails
-            print("Cleaning up shared memory blocks...")
+            _vprint("Cleaning up shared memory blocks...", verbose)
             for shm in shm_list:
                 shm.close()
                 shm.unlink() # Destroys the shared memory block
@@ -545,7 +556,7 @@ def run_law_model(
         output = {}
         if single_exponent:
             beta = exponents[0]
-            print(f'Simulating matrix for {law} β = {beta:.2g} with {model}')
+            _vprint(f'Simulating matrix for {law} β = {beta:.2g} with {model}', verbose)
             params = (data, pij, law, model, beta, repli, return_proba, average)
             result = _process_exponent(params) # Original function call
             if return_proba:
@@ -553,8 +564,8 @@ def run_law_model(
             else:
                 output[beta] = result['simulations']
         else:
-            print(f'Running simulations for {law} with {model} model ({repli} replications)')
-            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
+            _vprint(f'Running simulations for {law} with {model} model ({repli} replications)', verbose)
+            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
                 params = (data, pij, law, model, beta, repli, return_proba, average)
                 result = _process_exponent(params) # Original function call
                 if return_proba:
@@ -562,7 +573,7 @@ def run_law_model(
                 else:
                     output[beta] = result['simulations']
 
-    print('Done\n')
+    _vprint('Done\n', verbose)
     if single_exponent:
         return list(output.values())[0]
     else:
@@ -577,7 +588,8 @@ def run_law(
     opportunity: Optional[np.ndarray] = None,
     exponent: Union[float, np.ndarray] = 1.0,
     processes: Optional[int] = None,
-    random_seed: Optional[int] = None
+    random_seed: Optional[int] = None,
+    verbose: bool = True
 ) -> Union[np.ndarray, Dict[float, np.ndarray]]:
     r"""
     Estimate the probability matrix $`p_{i,j}`$ according to the trip distribution law.
@@ -602,6 +614,8 @@ def run_law(
         Number of processes for parallel computation. Default: CPU count - 2
     random_seed : int, optional
         Random seed for reproducibility
+    verbose : bool, default True
+        Controls the verbosity
         
     Returns
     -------
@@ -614,8 +628,8 @@ def run_law(
     # Check if opportunities matrix is needed and compute if not provided
     laws_requiring_opportunities = ["Rad", "RadExt", "Schneider"]
     if law in laws_requiring_opportunities and opportunity is None:
-        print(f"Law '{law}' requires opportunities matrix. Computing automatically...")
-        opportunity = extract_opportunities(mass_destination, distance, processes)
+        _vprint(f"Law '{law}' requires opportunities matrix. Computing automatically...", verbose)
+        opportunity = extract_opportunities(mass_destination, distance, processes, verbose)
     
     # Input validation
     _validate_inputs(law, "UM", mass_origin, mass_destination, distance, 
@@ -635,13 +649,13 @@ def run_law(
     
     if len(exponents) > 1 and num_processes > 1:
         # Parallel processing for multiple exponents
-        print(f'Estimating probabilities for {law}')
-        print(f'Using {num_processes} parallel processes')
+        _vprint(f'Estimating probabilities for {law}', verbose)
+        _vprint(f'Using {num_processes} parallel processes', verbose)
         
         with mp.Pool(processes=num_processes) as pool:
             params = [(law, distance, opportunity, mass_origin, mass_destination, beta) for beta in exponents]
             results = list(tqdm(pool.starmap(_proba, params), 
-                              total=len(exponents), desc='Computing exponents'))
+                              total=len(exponents), desc='Computing exponents', disable=not verbose))
         
         # Organize results
         output = {}
@@ -653,15 +667,15 @@ def run_law(
         output = {}
         if single_exponent:
             beta = exponents[0]
-            print(f'Estimating probabilities for {law} with β = {beta:.2g}')
+            _vprint(f'Estimating probabilities for {law} with β = {beta:.2g}', verbose)
             return _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
 
         else:
-            print(f'Estimating probabilities for {law}')
+            _vprint(f'Estimating probabilities for {law}', verbose)
             
-            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
+            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
                 output[beta] = _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
-    print('Done\n')
+    _vprint('Done\n', verbose)
     
     return output
 
@@ -676,7 +690,8 @@ def run_model(
     average: bool = False,
     repli: int = 1,
     processes: Optional[int] = None,
-    random_seed: Optional[int] = None
+    random_seed: Optional[int] = None,
+    verbose: bool = True
 ) -> Union[np.ndarray, Dict[float, np.ndarray]]:
     r"""
     Run trip distribution model simulations with provided probability matrix or matrices $`p_{i,j}`$.
@@ -706,6 +721,8 @@ def run_model(
         Number of processes for parallel computation. Default: CPU count - 2
     random_seed : int, optional
         Random seed for reproducibility
+    verbose : bool, default True
+        Controls the verbosity
         
     Returns
     -------
@@ -740,8 +757,8 @@ def run_model(
     
     if len(exponents) > 1 and num_processes > 1:
         # Parallel processing for multiple exponents
-        print(f'Running simulations with {model} model ({repli} replications)')
-        print(f'Using {num_processes} parallel processes')
+        _vprint(f'Running simulations with {model} model ({repli} replications)', verbose)
+        _vprint(f'Using {num_processes} parallel processes', verbose)
         shm_list = [] # To track shared memory blocks for cleanup
         try:
             # Create shared memory for all large NumPy arrays
@@ -760,12 +777,12 @@ def run_model(
                 params = [(shm_info, probabilities[beta], law, model, beta, repli, return_proba, average) for beta in exponents]
                 
                 results = list(tqdm(pool.imap(_process_exponent_shared, params),
-                                      total=len(exponents), desc='Computing exponents'))
+                                      total=len(exponents), desc='Computing exponents', disable=not verbose))
              
         finally:
             # CRITICAL: Clean up! Unlink all shared memory blocks
             # This must be in a 'finally' block to run even if the pool fails
-            print("Cleaning up shared memory blocks...")
+            _vprint("Cleaning up shared memory blocks...", verbose)
             for shm in shm_list:
                 shm.close()
                 shm.unlink() # Destroys the shared memory block
@@ -782,17 +799,17 @@ def run_model(
         output = {}
         if single_exponent:
             beta = exponents[0]
-            print(f'Simulating matrix with {model}')
+            _vprint(f'Simulating matrix with {model}', verbose)
             params = (data, probabilities[beta], law, model, beta, repli, return_proba, average)
             result = _process_exponent(params)
             output[beta] = result['simulations']
         else:
-            print(f'Running simulations with {model} model ({repli} replications)')
-            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents')):
+            _vprint(f'Running simulations with {model} model ({repli} replications)', verbose)
+            for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
                 params = (data, probabilities[beta], law, model, beta, repli, return_proba, average)
                 result = _process_exponent(params)
                 output[beta] = result['simulations']
-    print('Done\n')
+    _vprint('Done\n', verbose)
     
     # Return format based on input
     if single_exponent:
@@ -805,7 +822,8 @@ def gof(
     obs: np.ndarray,
     distance: np.ndarray,
     measures: Union[str, List[str]] = "all",
-    processes: Optional[int] = None
+    processes: Optional[int] = None,
+    verbose: bool = True
 ) -> Union[pd.DataFrame, Dict[float, pd.DataFrame]]:
     r"""
     Calculate goodness-of-fit measures for simulated vs observed trip matrices.
@@ -823,6 +841,8 @@ def gof(
         ["CPC", "CPL", "CPCd", "KS_stat", "KS_pval", "KL_div", "RMSE"]
     processes : int, optional
         Number of processes for parallel computation. Default: CPU count - 2
+    verbose : bool, default True
+        Controls the verbosity
         
     Returns
     -------
@@ -852,8 +872,8 @@ def gof(
         
         if len(exponents) > 1 and num_processes > 1:
             # Parallel processing for multiple exponents
-            print(f'Calculating GOF measures for {len(exponents)} exponents')
-            print(f'Using {num_processes} parallel processes')
+            _vprint(f'Calculating GOF measures for {len(exponents)} exponents', verbose)
+            _vprint(f'Using {num_processes} parallel processes', verbose)
             
             shm_list = [] # To track shared memory blocks for cleanup
             try:
@@ -869,11 +889,11 @@ def gof(
                     params = [(shm_info, sim[exponent], selected_measures) for exponent in exponents]
                     
                     results = list(tqdm(pool.imap(_calculate_gof_shared, params), 
-                                  total=len(exponents), desc='Computing GOF measures'))
+                                  total=len(exponents), desc='Computing GOF measures', disable=not verbose))
             finally:
                 # CRITICAL: Clean up! Unlink all shared memory blocks
                 # This must be in a 'finally' block to run even if the pool fails
-                print("Cleaning up shared memory blocks...")
+                _vprint("Cleaning up shared memory blocks...", verbose)
                 for shm in shm_list:
                     shm.close()
                     shm.unlink() # Destroys the shared memory block
@@ -883,7 +903,7 @@ def gof(
             for i, exponent in enumerate(exponents):
                 output[exponent] = results[i]
             
-            print('Done\n')
+            _vprint('Done\n', verbose)
             return output
         
         else:
@@ -891,22 +911,22 @@ def gof(
             results = {}
             if single_simulation:
                 exponent = exponents[0]
-                print(f'Calculating GOF measures for exponent {exponent}')
+                _vprint(f'Calculating GOF measures for exponent {exponent}', verbose)
                 params = (sim[exponent], obs, distance, selected_measures)
                 results[exponent] = _calculate_gof(params)
             else:
-                print(f'Calculating GOF measures for {len(exponents)} exponents')
-                for exponent in tqdm(exponents, desc='Computing GOF measures'):
+                _vprint(f'Calculating GOF measures for {len(exponents)} exponents', verbose)
+                for exponent in tqdm(exponents, desc='Computing GOF measures', disable=not verbose):
                     params = (sim[exponent], obs, distance, selected_measures)
                     results[exponent] = _calculate_gof(params)
             
-            print('Done\n')
+            _vprint('Done\n', verbose)
             return results
     else:
         # Single simulation matrix
-        print('Calculating GOF measures')
+        _vprint('Calculating GOF measures', verbose)
         result = _calculate_gof((sim, obs, distance, selected_measures))
-        print('Done\n')
+        _vprint('Done\n', verbose)
         return result
 
 def _validate_inputs(law, model, mass_origin, mass_destination, distance, 
@@ -1444,11 +1464,11 @@ def _calculate_gof_shared(params):
 
 def _single_metric_average(exponent, params):
     # Specifying explicit boundaries (0, x) results in minimize_scalar getting stuck on the upper bound x
-    print(f'Trying β = {exponent}')
+    law, model, measure, mi, mj, distance, opportunity, Oi, Dj, obs, average, repli, processes, verbose = params
+    _vprint(f'Trying β = {exponent}', verbose)
     if exponent <=0:
         return np.inf
         
-    law, model, measure, mi, mj, distance, opportunity, Oi, Dj, obs, average, repli, processes = params
     pij = _proba(law, distance, opportunity, mi, mj, exponent)
 
     if measure in ['CPC', 'CPL', 'CPCd']:
@@ -1462,11 +1482,11 @@ def _single_metric_average(exponent, params):
     if repli > 1 and num_processes > 1:
         # Parallel processing for multiple realizations
         with mp.Pool(processes=num_processes) as pool:
-            # print(f'Calculating average {measure} over {repli} realizations')
-            # print(f'Using {num_processes} parallel processes')
+            _vprint(f'Calculating average {measure} over {repli} realizations', verbose)
+            _vprint(f'Using {num_processes} parallel processes', verbose)
             params = [(model, measure, obs, pij, distance, Oi, Dj, average) for r in range(repli)]
-            # results = list(tqdm(pool.imap(_single_metric, params), total=repli, desc='Computing GOF measure'))		
-            results = list(pool.imap(_single_metric, params))		
+            results = list(tqdm(pool.imap(_single_metric, params), total=repli, desc='Computing GOF measure', disable=not verbose))		
+            	
 
         return sign * np.mean(results)
     else:
