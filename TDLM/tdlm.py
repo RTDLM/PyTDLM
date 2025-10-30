@@ -1577,41 +1577,33 @@ def _proba(law, dij, sij, mi, mj, beta):
 
     if law == "GravExp":
         W = np.outer(mi, mj) * np.exp(-dij * beta)
-        np.fill_diagonal(W, 0)
-
+    
     elif law == "NGravExp":
         W = mj * np.exp(-dij * beta)
-        np.fill_diagonal(W, 0)
-
+    
     elif law == "GravPow":
         W = np.outer(mi, mj) * dij**(-beta)
-        np.fill_diagonal(W, 0)
-
+    
     elif law == "NGravPow":
         W = mj * dij**(-beta)
-        np.fill_diagonal(W, 0)
-
+    
     elif law == "Schneider":
         W = np.exp(-beta * sij) - np.exp(-beta * (sij + mj))
-        np.fill_diagonal(W, 0)
-        W[np.isnan(W)] = 0
-
+    
     elif law == "Rad":
         W = np.outer(mi, mj) / ((mi[:, np.newaxis] + sij) * (mi[:, np.newaxis] + mj + sij))
-        np.fill_diagonal(W, 0)
-        W[np.isnan(W)] = 0
-
+    
     elif law == "RadExt":
         numerator = ((mi[:, np.newaxis] + mj + sij)**beta - (mi[:, np.newaxis] + sij)**beta) * (mi**beta + 1)[:, np.newaxis]
         denominator = ((mi[:, np.newaxis] + mj + sij)**beta + 1) * ((mi[:, np.newaxis] + sij)**beta + 1)
         W = numerator / denominator
-        np.fill_diagonal(W, 0)
-        W[np.isnan(W)] = 0
-
+    
     elif law == "Rand":
         W = np.ones((n, n)) / (n**2 - n)
-        np.fill_diagonal(W, 0)
-
+    
+    np.fill_diagonal(W, 0)
+    W[~np.isfinite(W)] = 0
+    
     # Row normalization if needed
     if law not in ["GravExp", "GravPow", "Rand"]:
         Wi = np.sum(W, axis=1)
