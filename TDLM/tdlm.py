@@ -370,9 +370,10 @@ def run_law_model_gof(
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
     
     if len(exponents) > 1 and num_processes > 1:
+        num_processes_needed = min(len(exponent), num_processes)
         # Parallel processing for multiple exponents
         _vprint(f'Running simulations and GOF for {law} with {model} model ({repli} replications)', verbose)
-        _vprint(f'Using {num_processes} parallel processes', verbose)
+        _vprint(f'Using {num_processes_needed} parallel processes', verbose)
         
         shm_list = [] # To track shared memory blocks for cleanup
         try:
@@ -387,7 +388,7 @@ def run_law_model_gof(
                 'obs': _numpy_to_shm(obs, shm_list)
             }
             
-            with mp.Pool(processes=num_processes) as pool:
+            with mp.Pool(processes=num_processes_needed) as pool:
                 params = [(shm_info, pij, law, model, beta, repli, average, selected_measures) for beta in exponents]
                 results = list(tqdm(pool.imap(_process_exponent_gof_shared, params),
                                     total=len(exponents), desc='Computing exponents', disable=not verbose))
@@ -510,8 +511,9 @@ def run_law_model(
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
     
     if len(exponents) > 1 and num_processes > 1:
+        num_processes_needed = min(len(exponent), num_processes)
         _vprint(f'Running simulations for {law} with {model} model ({repli} replications)', verbose)
-        _vprint(f'Using {num_processes} parallel processes', verbose)
+        _vprint(f'Using {num_processes_needed} parallel processes', verbose)
         
         shm_list = [] # To track shared memory blocks for cleanup
         try:
@@ -525,7 +527,7 @@ def run_law_model(
                 'in_trips': _numpy_to_shm(in_trips, shm_list),
             }
 
-            with mp.Pool(processes=num_processes) as pool:
+            with mp.Pool(processes=num_processes_needed) as pool:
                 # Prepare parameters for the shared worker function
                 # Pass the dict of shared memory info instead of the raw data
                 params = [(shm_info, pij, law, model, beta, repli, return_proba, average) for beta in exponents]
@@ -648,11 +650,12 @@ def run_law(
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
     
     if len(exponents) > 1 and num_processes > 1:
+        num_processes_needed = min(len(exponent), num_processes)
         # Parallel processing for multiple exponents
         _vprint(f'Estimating probabilities for {law}', verbose)
-        _vprint(f'Using {num_processes} parallel processes', verbose)
+        _vprint(f'Using {num_processes_needed} parallel processes', verbose)
         
-        with mp.Pool(processes=num_processes) as pool:
+        with mp.Pool(processes=num_processes_needed) as pool:
             params = [(law, distance, opportunity, mass_origin, mass_destination, beta) for beta in exponents]
             results = list(tqdm(pool.starmap(_proba, params), 
                               total=len(exponents), desc='Computing exponents', disable=not verbose))
@@ -756,9 +759,10 @@ def run_model(
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
     
     if len(exponents) > 1 and num_processes > 1:
+        num_processes_needed = min(len(exponent), num_processes)
         # Parallel processing for multiple exponents
         _vprint(f'Running simulations with {model} model ({repli} replications)', verbose)
-        _vprint(f'Using {num_processes} parallel processes', verbose)
+        _vprint(f'Using {num_processes_needed} parallel processes', verbose)
         shm_list = [] # To track shared memory blocks for cleanup
         try:
             # Create shared memory for all large NumPy arrays
@@ -771,7 +775,7 @@ def run_model(
                 'in_trips': _numpy_to_shm(in_trips, shm_list),
             }
             
-            with mp.Pool(processes=num_processes) as pool:
+            with mp.Pool(processes=num_processes_needed) as pool:
                 # Prepare parameters for the shared worker function
                 # Pass the dict of shared memory info instead of the raw data
                 params = [(shm_info, probabilities[beta], law, model, beta, repli, return_proba, average) for beta in exponents]
@@ -871,9 +875,10 @@ def gof(
         single_simulation = len(exponents) == 1
         
         if len(exponents) > 1 and num_processes > 1:
+            num_processes_needed = min(len(exponents), num_processes)
             # Parallel processing for multiple exponents
             _vprint(f'Calculating GOF measures for {len(exponents)} exponents', verbose)
-            _vprint(f'Using {num_processes} parallel processes', verbose)
+            _vprint(f'Using {num_processes_needed} parallel processes', verbose)
             
             shm_list = [] # To track shared memory blocks for cleanup
             try:
@@ -883,7 +888,7 @@ def gof(
                     'distance': _numpy_to_shm(distance, shm_list),
                 }
                 
-                with mp.Pool(processes=num_processes) as pool:
+                with mp.Pool(processes=num_processes_needed) as pool:
                     # Prepare parameters for the new shared worker function
                     # Pass the dict of shared memory info instead of the raw data
                     params = [(shm_info, sim[exponent], selected_measures) for exponent in exponents]
@@ -1481,9 +1486,10 @@ def _single_metric_average(exponent, params):
     
     if repli > 1 and num_processes > 1:
         # Parallel processing for multiple realizations
-        with mp.Pool(processes=num_processes) as pool:
-            _vprint(f'Calculating average {measure} over {repli} realizations', verbose)
-            _vprint(f'Using {num_processes} parallel processes', verbose)
+        num_processes_needed = min(repli, num_processes)
+        _vprint(f'Calculating average {measure} over {repli} realizations', verbose)
+        _vprint(f'Using {num_processes_needed} parallel processes', verbose)
+        with mp.Pool(processes=num_processes_needed) as pool:
             params = [(model, measure, obs, pij, distance, Oi, Dj, average) for r in range(repli)]
             results = list(tqdm(pool.imap(_single_metric, params), total=repli, desc='Computing GOF measure', disable=not verbose))		
             	
