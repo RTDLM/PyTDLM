@@ -3,10 +3,16 @@ hide:
   - navigation
 ---
 
-# PyTDLM 0.1.0.9000
+# What's new
 
-This is a list of changes made in the development/GitHub version of the package  
-between [PyTDLM 0.1.0](https://github.com/RTDLM/PyTDLM/releases/tag/v0.1.0) and 
-the next release.
+## v0.2.0 - Oct 19, 2025
+- Align with R package : add functions `run_law` and `run_model`, implement `average` option
+- Refactor multiprocessing with `shared_memory`
+- Add function `run_law_model_gof`
+- Add function `run_optimization`
+- Implement verbosity control
 
-* 
+## v0.1.0 - Jun 19, 2025
+Initial public release of **PyTDLM**
+
+

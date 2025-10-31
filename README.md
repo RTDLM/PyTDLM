@@ -4,8 +4,11 @@
 
 <!-- badges: start -->
 [![Test Build and Distribution](https://github.com/RTDLM/PyTDLM/actions/workflows/test-builds.yml/badge.svg)](https://github.com/RTDLM/PyTDLM/actions/workflows/test-builds.yml)
-[![PyPi](https://img.shields.io/pypi/v/pytdlm.svg)](https://pypi.org/project/pytdlm)
-[![Downloads](https://img.shields.io/pypi/dm/pytdlm.svg)](https://pypistats.org/packages/pytdlm)
+[![PyPI Version](https://img.shields.io/pypi/v/pytdlm.svg)](https://pypi.org/project/pytdlm)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/pytdlm.svg)](https://pypistats.org/packages/pytdlm)
+[![Conda Version](https://img.shields.io/conda/v/conda-forge/pytdlm.svg)](https://anaconda.org/conda-forge/pytdlm)
+[![Conda Downloads](https://img.shields.io/conda/d/conda-forge/pytdlm)](https://anaconda.org/conda-forge/pytdlm)
+
 <!-- badges: end -->
 
 ## Description
@@ -21,7 +24,7 @@ To make this framework more accessible, we developed both an
 [R package](https://rtdlm.github.io/TDLM/) 
 and a [Python package](https://rtdlm.github.io/PyTDLM/), which replace the 
 original [Java scripts](https://github.com/maximelenormand/Trip-distribution-laws-and-models) 
-and extend their functionality.  
+and extend their functionality.
 
 [PyTDLM](https://rtdlm.github.io/PyTDLM/) is a Python port of the 
 [TDLM R package](https://github.com/RTDLM/TDLM), with 
@@ -30,7 +33,7 @@ exponent values.
 
 ## Installation
 
-### Using conda (coming soon)
+### Using conda
 ```bash
 conda install -c conda-forge pytdlm
 ```
@@ -55,7 +58,7 @@ from TDLM import tdlm
 
 # Prepare your data
 mi = np.array([100, 200, 150])  # Origin masses
-mj = np.array([80, 180, 120])   # Destination masses  
+mj = np.array([80, 180, 120])   # Destination masses
 dij = np.array([[0, 10, 15],    # Distance matrix
                 [10, 0, 8], 
                 [15, 8, 0]])
