@@ -161,11 +161,11 @@ def run_optimization(
     obs : np.ndarray
         Observed trip matrix $`T_{i,j}`$ (n x n)
     opportunity : np.ndarray, optional
-        Matrix of opportunities $`S_{i,j}`$ (n x n). Required for "Rad", "RadExt", "Schneider".
+        Matrix of opportunities $`S_{i,j}`$ (n x n). Required for "RadExt", "Schneider".
         If not provided and required, will be computed automatically.
     law : str or List[str], default "all"
         Trip distribution law. "all" or subset of: 
-        ["GravExp", "NGravExp", "GravPow", "NGravPow", "Schneider", "Rad", "RadExt", "Rand"]
+        ["GravExp", "NGravExp", "GravPow", "NGravPow", "Schneider", "RadExt"]
     model : str or List[str], default "all"
         Distribution model. "all" or subset of:
         ["UM", "PCM", "ACM", "DCM"]
@@ -197,8 +197,8 @@ def run_optimization(
     n = len(mass_origin)
     
     #Check laws
-    all_laws = ["GravExp", "NGravExp", "GravPow", "NGravPow", "Schneider", "Rad", "RadExt", "Rand"]
-    laws_requiring_opportunities = ["Rad", "RadExt", "Schneider"]
+    all_laws = ["GravExp", "NGravExp", "GravPow", "NGravPow", "Schneider", "RadExt"]
+    laws_requiring_opportunities = ["RadExt", "Schneider"]
     
     if law == "all":
         selected_laws = all_laws
@@ -207,7 +207,7 @@ def run_optimization(
         invalid = set(selected_laws) - set(all_laws)
         if invalid:
             raise _TDLMError(f"Invalid laws: {invalid}. Available: {['all']+all_laws}")
-    
+
     require_opportunity = set(selected_laws).intersection(set(laws_requiring_opportunities))
     if require_opportunity:
         if opportunity is None:
@@ -250,6 +250,12 @@ def run_optimization(
     all_measures = ["CPC", "CPL", "CPCd", "KS_stat", "KS_pval", "KL_div", "RMSE"]
     if measure not in all_measures:
         raise _TDLMError(f"Invalid measure: {measure}. Available: {all_measures}")
+        
+    if measure in ['CPC', 'CPL', 'CPCd']:
+        sign = -1
+    else:
+        sign = 1
+        
     # Set random seed if provided
     if random_seed is not None:
         np.random.seed(random_seed)
@@ -263,8 +269,10 @@ def run_optimization(
             res = minimize_scalar(_single_metric_average, args=(params))
             if res.success:
                 result_dict['Exponent'] = res.x
+                result_dict[f'{measure}'] = sign*res.fun
             else:
                 result_dict['Exponent'] = np.nan
+                result_dict[f'{measure}'] = np.nan
             results.append(result_dict)
     
     return pd.DataFrame(results)
@@ -365,6 +373,12 @@ def run_law_model_gof(
     # Handle single vs multiple exponents
     exponents = np.atleast_1d(exponent)
     single_exponent = len(exponents) == 1
+    
+    # Handle laws without exponent
+    if law in ['Rad', 'Rand']:
+        if not single_exponent:
+            _vprint(f'Law {law} does not require an exponent. Disregarding the given exponents.', verbose)
+        exponents = [None]
     
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
@@ -507,6 +521,12 @@ def run_law_model(
     exponents = np.atleast_1d(exponent)
     single_exponent = len(exponents) == 1
     
+    # Handle laws without exponent
+    if law in ['Rad', 'Rand']:
+        if not single_exponent:
+            _vprint(f'Law {law} does not require an exponent. Disregarding the given exponents.', verbose)
+        exponents = [None]
+        
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
     
@@ -645,6 +665,11 @@ def run_law(
     exponents = np.atleast_1d(exponent)
     single_exponent = len(exponents) == 1
     
+    # Handle laws without exponent
+    if law in ['Rad', 'Rand']:
+        if not single_exponent:
+            _vprint(f'Law {law} does not require an exponent. Disregarding the given exponents.', verbose)
+        exponents = [None]
  
     # Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
@@ -1468,18 +1493,22 @@ def _calculate_gof_shared(params):
             shm.close()
 
 def _single_metric_average(exponent, params):
-    # Specifying explicit boundaries (0, x) results in minimize_scalar getting stuck on the upper bound x
     law, model, measure, mi, mj, distance, opportunity, Oi, Dj, obs, average, repli, processes, verbose = params
     _vprint(f'Trying β = {exponent}', verbose)
-    if exponent <=0:
-        return np.inf
-        
-    pij = _proba(law, distance, opportunity, mi, mj, exponent)
-
     if measure in ['CPC', 'CPL', 'CPCd']:
         sign = -1
     else:
         sign = 1
+
+    # Specifying explicit boundaries (0, x) might result in minimize_scalar getting stuck on the upper bound x
+    if exponent <=0:
+        return -sign*np.inf
+    if law in ['GravExp', 'NGravExp', 'Schneider'] and exponent >=1:
+        return -sign*np.inf
+    
+    pij = _proba(law, distance, opportunity, mi, mj, exponent)
+
+
         	
 	# Setup multiprocessing
     num_processes = processes if processes is not None else max(1, mp.cpu_count() - 2)
