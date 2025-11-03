@@ -701,7 +701,6 @@ def run_law(
         output = {}
         if single_exponent:
             beta = exponents[0]
-            _vprint(f'Estimating probabilities for {law} with β = {beta:.2g}', verbose)
             if beta is not None:
                 _vprint(f'Estimating probabilities for {law} β = {beta:.2g}', verbose)
             else:
