@@ -386,7 +386,7 @@ def run_law_model_gof(
     if len(exponents) > 1 and num_processes > 1:
         num_processes_needed = min(len(exponent), num_processes)
         # Parallel processing for multiple exponents
-        _vprint(f'Running simulations and GOF for {law} with {model} model ({repli} replications)', verbose)
+        _vprint(f'Simulating matrix and GOF for {law} with {model} model ({repli} replications)', verbose)
         _vprint(f'Using {num_processes_needed} parallel processes', verbose)
         
         shm_list = [] # To track shared memory blocks for cleanup
@@ -425,13 +425,16 @@ def run_law_model_gof(
         data = (mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs)
         if single_exponent:
             beta = exponents[0]
-            _vprint(f'Simulating matrix and GOF for {law} β = {beta:.2g} with {model}', verbose)
+            if beta is not None:
+                _vprint(f'Simulating matrix and GOF for {law} β = {beta:.2g} with {model}', verbose)
+            else:
+                _vprint(f'Simulating matrix and GOF for {law} with {model}', verbose)
             params = (data, pij, law, model, beta, repli, average, selected_measures)
             result = _process_exponent_gof(params)
             return result
         else:
             results = {}
-            _vprint(f'Running simulations and GOF for {law} with {model} model ({repli} replications)', verbose)
+            _vprint(f'Simulating matrix and GOF for {law} with {model} model ({repli} replications)', verbose)
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
                 params = (data, pij, law, model, beta, repli, average, selected_measures)
                 results[beta] = _process_exponent_gof(params)
@@ -532,7 +535,7 @@ def run_law_model(
     
     if len(exponents) > 1 and num_processes > 1:
         num_processes_needed = min(len(exponent), num_processes)
-        _vprint(f'Running simulations for {law} with {model} model ({repli} replications)', verbose)
+        _vprint(f'Simulating matrix for {law} with {model} model ({repli} replications)', verbose)
         _vprint(f'Using {num_processes_needed} parallel processes', verbose)
         
         shm_list = [] # To track shared memory blocks for cleanup
@@ -578,7 +581,10 @@ def run_law_model(
         output = {}
         if single_exponent:
             beta = exponents[0]
-            _vprint(f'Simulating matrix for {law} β = {beta:.2g} with {model}', verbose)
+            if beta is not None:
+                _vprint(f'Simulating matrix for {law} β = {beta:.2g} with {model}', verbose)
+            else:
+                _vprint(f'Simulating matrix for {law} with {model}', verbose)
             params = (data, pij, law, model, beta, repli, return_proba, average)
             result = _process_exponent(params) # Original function call
             if return_proba:
@@ -586,7 +592,7 @@ def run_law_model(
             else:
                 output[beta] = result['simulations']
         else:
-            _vprint(f'Running simulations for {law} with {model} model ({repli} replications)', verbose)
+            _vprint(f'Simulating matrix for {law} with {model} model ({repli} replications)', verbose)
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
                 params = (data, pij, law, model, beta, repli, return_proba, average)
                 result = _process_exponent(params) # Original function call
@@ -696,6 +702,10 @@ def run_law(
         if single_exponent:
             beta = exponents[0]
             _vprint(f'Estimating probabilities for {law} with β = {beta:.2g}', verbose)
+            if beta is not None:
+                _vprint(f'Estimating probabilities for {law} β = {beta:.2g}', verbose)
+            else:
+                _vprint(f'Estimating probabilities for {law}', verbose)
             return _proba(law, distance, opportunity, mass_origin, mass_destination, beta)
 
         else:
@@ -786,7 +796,7 @@ def run_model(
     if len(exponents) > 1 and num_processes > 1:
         num_processes_needed = min(len(exponent), num_processes)
         # Parallel processing for multiple exponents
-        _vprint(f'Running simulations with {model} model ({repli} replications)', verbose)
+        _vprint(f'Simulating matrix with {model} model ({repli} replications)', verbose)
         _vprint(f'Using {num_processes_needed} parallel processes', verbose)
         shm_list = [] # To track shared memory blocks for cleanup
         try:
@@ -833,7 +843,7 @@ def run_model(
             result = _process_exponent(params)
             output[beta] = result['simulations']
         else:
-            _vprint(f'Running simulations with {model} model ({repli} replications)', verbose)
+            _vprint(f'Simulating matrix with {model} model ({repli} replications)', verbose)
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
                 params = (data, probabilities[beta], law, model, beta, repli, return_proba, average)
                 result = _process_exponent(params)
@@ -1503,7 +1513,7 @@ def _single_metric_average(exponent, params):
     # Specifying explicit boundaries (0, x) might result in minimize_scalar getting stuck on the upper bound x
     if exponent <=0:
         return -sign*np.inf
-    if law in ['GravExp', 'NGravExp', 'Schneider'] and exponent >=1:
+    if law in ['GravExp', 'NGravExp', 'Schneider'] and exponent >1:
         return -sign*np.inf
     
     pij = _proba(law, distance, opportunity, mi, mj, exponent)
