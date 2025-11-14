@@ -3,6 +3,7 @@
 # Systematic comparison of trip distribution laws and models in Python
 
 <!-- badges: start -->
+[![DOI](https://zenodo.org/badge/994614362.svg)](https://doi.org/10.5281/zenodo.17497560)
 [![Test Build and Distribution](https://github.com/RTDLM/PyTDLM/actions/workflows/test-builds.yml/badge.svg)](https://github.com/RTDLM/PyTDLM/actions/workflows/test-builds.yml)
 [![PyPI Version](https://img.shields.io/pypi/v/pytdlm.svg)](https://pypi.org/project/pytdlm)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/pytdlm.svg)](https://pypistats.org/packages/pytdlm)
