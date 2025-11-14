@@ -255,7 +255,7 @@ def run_optimization(
         sign = -1
     else:
         sign = 1
-        
+    
     # Set random seed if provided
     if random_seed is not None:
         np.random.seed(random_seed)
@@ -264,9 +264,20 @@ def run_optimization(
     for i, l in enumerate(selected_laws):
         for j, m in enumerate(selected_models):
             result_dict= {'Law':l, 'Model':m}
-            _vprint(f'Calculating average {measure} for {l} with {m} over {repli} realizations', verbose)
+            _vprint(f'\nCalculating average {measure} for {l} with {m} over {repli} realizations', verbose)
             params = [l, m, measure, mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs, average, repli, processes, verbose]
-            res = minimize_scalar(_single_metric_average, args=(params))
+            
+            if l in ['GravExp', 'NGravExp']:
+                bounds = (0,1)
+                tol = None
+            elif l == 'Schneider':
+                bounds = (0,1e-4)
+                tol = 1e-7
+            else:
+                bounds = None
+                tol = None
+                
+            res = minimize_scalar(_single_metric_average, bounds=bounds, tol=tol, args=(params))
             if res.success:
                 result_dict['Exponent'] = res.x
                 result_dict[f'{measure}'] = sign*res.fun
@@ -1503,7 +1514,7 @@ def _calculate_gof_shared(params):
 
 def _single_metric_average(exponent, params):
     law, model, measure, mi, mj, distance, opportunity, Oi, Dj, obs, average, repli, processes, verbose = params
-    _vprint(f'Trying β = {exponent}', verbose)
+    _vprint(f'\nTrying β = {exponent}', verbose)
     if measure in ['CPC', 'CPL', 'CPCd']:
         sign = -1
     else:
@@ -1512,8 +1523,8 @@ def _single_metric_average(exponent, params):
     # Specifying explicit boundaries (0, x) might result in minimize_scalar getting stuck on the upper bound x
     if exponent <=0:
         return -sign*np.inf
-    if law in ['GravExp', 'NGravExp', 'Schneider'] and exponent >1:
-        return -sign*np.inf
+    # if law in ['GravExp', 'NGravExp', 'Schneider'] and exponent >1:
+    #     return -sign*np.inf
     
     pij = _proba(law, distance, opportunity, mi, mj, exponent)
 
@@ -1535,13 +1546,14 @@ def _single_metric_average(exponent, params):
         return sign * np.mean(results)
     else:
 		# Sequential processing
+        params = [model, measure, obs, pij, distance, Oi, Dj, average]
         if repli > 1:
-            result = _single_metric(params) 
-            return sign * result
-        else:
             results = [_single_metric(params) for r in repli]
             return sign * np.mean(results)
-
+        else:
+            result = _single_metric(params) 
+            return sign * result
+            
 def _single_metric(params):
     model, measure, obs, pij, distance, out_trips, in_trips, average = params
     n = obs.shape[0]

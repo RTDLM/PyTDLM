@@ -22,6 +22,349 @@ class TestTDLM:
         self.Dj = np.array([40, 90, 50])
         self.Tij = np.array([[0, 25, 25], [30, 0, 50], [35, 35, 0]])
     
+    def test_run_optimization_basic(self):
+        """Test basic functionality of run_optimization"""
+        result = tdlm.run_optimization(
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            law='GravExp',
+            model='UM',
+            out_trips=self.Oi,
+            repli=1,
+            measure='CPC'
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        assert 'Law' in result.columns
+        assert 'Model' in result.columns
+        assert 'Exponent' in result.columns
+        assert 'CPC' in result.columns
+        assert len(result) == 1
+        assert result['Law'].iloc[0] == 'GravExp'
+        assert result['Model'].iloc[0] == 'UM'
+        assert not np.isnan(result['Exponent'].iloc[0])
+    
+    def test_run_optimization_multiple_laws(self):
+        """Test run_optimization with multiple laws"""
+        laws = ['GravExp', 'NGravExp', 'GravPow']
+        result = tdlm.run_optimization(
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            law=laws,
+            model='PCM',
+            out_trips=self.Oi,
+            repli=1,
+            measure='CPC'
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(laws)
+        assert set(result['Law'].values) == set(laws)
+        assert all(result['Model'] == 'PCM')
+    
+    def test_run_optimization_multiple_models(self):
+        """Test run_optimization with multiple models"""
+        models = ['UM', 'PCM', 'ACM', 'DCM']
+        result = tdlm.run_optimization(
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            law='GravExp',
+            model=models,
+            out_trips=self.Oi,
+            in_trips=self.Dj,
+            repli=1,
+            measure='CPC'
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(models)
+        assert set(result['Model'].values) == set(models)
+        assert all(result['Law'] == 'GravExp')
+    
+    def test_run_optimization_all_laws_all_models(self):
+        """Test run_optimization with all laws and all models"""
+        result = tdlm.run_optimization(
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            law='all',
+            model='all',
+            out_trips=self.Oi,
+            in_trips=self.Dj,
+            repli=1,
+            measure='CPC'
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        all_laws = ["GravExp", "NGravExp", "GravPow", "NGravPow", "Schneider", "RadExt"]
+        all_models = ["UM", "PCM", "ACM", "DCM"]
+        assert len(result) == len(all_laws) * len(all_models)
+    
+    def test_run_optimization_different_measures(self):
+        """Test run_optimization with different GOF measures"""
+        measures = ['CPC', 'CPL', 'RMSE', 'KL_div']
+        
+        for measure in measures:
+            result = tdlm.run_optimization(
+                mass_origin=self.mi,
+                mass_destination=self.mj,
+                distance=self.dij,
+                obs=self.Tij,
+                law='GravExp',
+                model='UM',
+                out_trips=self.Oi,
+                repli=1,
+                measure=measure
+            )
+            
+            assert isinstance(result, pd.DataFrame)
+            assert measure in result.columns
+            assert not np.isnan(result[measure].iloc[0])
+    
+    def test_run_optimization_invalid_measure(self):
+        """Test error handling for invalid measure"""
+        with pytest.raises(_TDLMError):
+            tdlm.run_optimization(
+                mass_origin=self.mi,
+                mass_destination=self.mj,
+                distance=self.dij,
+                obs=self.Tij,
+                law='GravExp',
+                model='UM',
+                out_trips=self.Oi,
+                measure='InvalidMeasure'
+            )
+    
+    def test_run_optimization_with_opportunities(self):
+        """Test run_optimization with laws requiring opportunities"""
+        result = tdlm.run_optimization(
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            opportunity=self.sij,
+            law=['RadExt', 'Schneider'],
+            model='UM',
+            out_trips=self.Oi,
+            repli=1,
+            measure='CPC'
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 2
+        assert set(result['Law'].values) == {'RadExt', 'Schneider'}
+    
+    def test_run_optimization_average_mode(self):
+        """Test run_optimization with average=True"""
+        result = tdlm.run_optimization(
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            law='GravExp',
+            model='UM',
+            out_trips=self.Oi,
+            average=True,
+            repli=10,  # Should be ignored
+            measure='CPC'
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        assert not np.isnan(result['Exponent'].iloc[0])
+    
+    def test_run_law_model_gof_basic(self):
+        """Test basic functionality of run_law_model_gof"""
+        result = tdlm.run_law_model_gof(
+            law='GravExp',
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            exponent=0.5,
+            model='UM',
+            out_trips=self.Oi,
+            repli=2
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 2  # 2 replications
+        assert 'Replication' in result.columns
+        assert 'CPC' in result.columns
+        assert 'RMSE' in result.columns
+    
+    def test_run_law_model_gof_multiple_exponents(self):
+        """Test run_law_model_gof with multiple exponents"""
+        exponents = [0.1, 0.5, 1.0]
+        result = tdlm.run_law_model_gof(
+            law='NGravExp',
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            exponent=exponents,
+            model='PCM',
+            out_trips=self.Oi,
+            repli=3
+        )
+        
+        assert isinstance(result, dict)
+        assert len(result) == len(exponents)
+        for exp in exponents:
+            assert exp in result
+            assert isinstance(result[exp], pd.DataFrame)
+            assert len(result[exp]) == 3  # 3 replications
+    
+    def test_run_law_model_gof_specific_measures(self):
+        """Test run_law_model_gof with specific measures"""
+        measures = ['CPC', 'CPL', 'RMSE']
+        result = tdlm.run_law_model_gof(
+            law='GravExp',
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            exponent=0.5,
+            model='UM',
+            out_trips=self.Oi,
+            repli=1,
+            measures=measures
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        for measure in measures:
+            assert measure in result.columns
+        # Check that only specified measures are present (plus Replication)
+        assert set(result.columns) == set(measures + ['Replication'])
+    
+    def test_run_law_model_gof_all_measures(self):
+        """Test run_law_model_gof with all measures"""
+        result = tdlm.run_law_model_gof(
+            law='GravExp',
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            exponent=0.5,
+            model='UM',
+            out_trips=self.Oi,
+            repli=1,
+            measures='all'
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        all_measures = ["CPC", "CPL", "CPCd", "KS_stat", "KS_pval", "KL_div", "RMSE"]
+        for measure in all_measures:
+            assert measure in result.columns
+    
+    def test_run_law_model_gof_average_mode(self):
+        """Test run_law_model_gof with average=True"""
+        result = tdlm.run_law_model_gof(
+            law='GravExp',
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            exponent=0.5,
+            model='UM',
+            out_trips=self.Oi,
+            average=True,
+            repli=10  # Should be ignored
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 1  # Only 1 replication when average=True
+    
+    def test_run_law_model_gof_with_opportunities(self):
+        """Test run_law_model_gof with laws requiring opportunities"""
+        for law in ['Rad', 'RadExt', 'Schneider']:
+            result = tdlm.run_law_model_gof(
+                law=law,
+                mass_origin=self.mi,
+                mass_destination=self.mj,
+                distance=self.dij,
+                obs=self.Tij,
+                opportunity=self.sij,
+                exponent=0.5,
+                model='UM',
+                out_trips=self.Oi,
+                repli=1
+            )
+            assert isinstance(result, pd.DataFrame)
+            assert len(result) == 1
+    
+    def test_run_law_model_gof_constrained_models(self):
+        """Test run_law_model_gof with all constrained models"""
+        for model in ['UM', 'PCM', 'ACM', 'DCM']:
+            kwargs = {'out_trips': self.Oi}
+            if model in ['ACM', 'DCM']:
+                kwargs['in_trips'] = self.Dj
+                
+            result = tdlm.run_law_model_gof(
+                law='GravExp',
+                mass_origin=self.mi,
+                mass_destination=self.mj,
+                distance=self.dij,
+                obs=self.Tij,
+                exponent=0.5,
+                model=model,
+                repli=2,
+                **kwargs
+            )
+            
+            assert isinstance(result, pd.DataFrame)
+            assert len(result) == 2
+    
+    def test_run_law_model_gof_random_seed(self):
+        """Test reproducibility with random seed for run_law_model_gof"""
+        result1 = tdlm.run_law_model_gof(
+            law='GravExp',
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            exponent=0.5,
+            model='UM',
+            out_trips=self.Oi,
+            repli=1,
+            random_seed=42
+        )
+        
+        result2 = tdlm.run_law_model_gof(
+            law='GravExp',
+            mass_origin=self.mi,
+            mass_destination=self.mj,
+            distance=self.dij,
+            obs=self.Tij,
+            exponent=0.5,
+            model='UM',
+            out_trips=self.Oi,
+            repli=1,
+            random_seed=42
+        )
+        
+        pd.testing.assert_frame_equal(result1, result2)
+    
+    def test_run_law_model_gof_invalid_measures(self):
+        """Test error handling for invalid measures"""
+        with pytest.raises(_TDLMError):
+            tdlm.run_law_model_gof(
+                law='GravExp',
+                mass_origin=self.mi,
+                mass_destination=self.mj,
+                distance=self.dij,
+                obs=self.Tij,
+                exponent=0.5,
+                model='UM',
+                out_trips=self.Oi,
+                measures=['InvalidMeasure']
+            )
     def test_run_law_model_basic(self):
         """Test basic functionality of run_law_model"""
         result = tdlm.run_law_model(
