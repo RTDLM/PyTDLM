@@ -26,6 +26,8 @@ theme:
   features:
     - navigation.tabs
     - navigation.tabs.sticky
+    - content.code.copy
+
 plugins:
   - search
   - mkdocstrings:
@@ -40,6 +42,8 @@ plugins:
             members_order: source
 
 markdown_extensions:
+  - attr_list
+  - md_in_html
   - admonition
   - codehilite
   - toc:

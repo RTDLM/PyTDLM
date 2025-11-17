@@ -15,7 +15,7 @@ from TDLM import tdlm
 
 data_path = os.getcwd() + os.sep + "data_US" + os.sep
 
-# Sample data - replace with your actual data
+# Example data - replace with your actual data
 print("Setting up example data...")
 
 #Inputs (mi, mj, Oi and Dj)
@@ -44,7 +44,13 @@ dij = dij.values.astype(float)
 
 # Observed OD matrix Tij (size n x n)
 Tij_df = pd.read_csv(data_path + "OD.csv", sep=";", header=0)
-Tij_observed = Tij_df.values.astype(float)
+Tij_observed = Tij_df.values.astype(int)
+
+# Pre-computing the opportunity matrix
+Sij = tdlm.extract_opportunities(
+    opportunity = mj, 
+    distance = dij
+)
 
 print("Running TDLM simulation...")
 start = perf_counter()
@@ -54,7 +60,7 @@ law = 'NGravExp'  # Normalized Gravity with Exponential decay
 model = 'DCM'     # Doubly Constrained Model
 
 # Test range of exponent values
-exponent = np.arange(0.01, 0.15, 0.005).round(3)
+exponents = np.arange(0.01, 0.15, 0.005).round(3)
 
 # Run the simulation and metrics all at once
 gof_results = tdlm.run_law_model_gof(
@@ -64,7 +70,8 @@ gof_results = tdlm.run_law_model_gof(
     distance=dij,
     obs = Tij_observed,
     opportunity=None,        # Not needed for this law
-    exponent=exponent,
+    exponent=exponents,
+    
     model=model,
     out_trips=Oi,
     in_trips=Dj,
@@ -72,12 +79,13 @@ gof_results = tdlm.run_law_model_gof(
     random_seed=42          # For reproducibility
 )
 print(f'Done in {timedelta(seconds=perf_counter() - start)}')
+
 # Process results for plotting
 print("Processing results...")
 
 # Calculate mean and std for each exponent
 metrics_summary = {}
-for exp in exponent:
+for exp in exponents:
     df = gof_results[exp]
     metrics_summary[exp] = {
         'CPC_mean': df['CPC'].mean(),
@@ -102,10 +110,10 @@ fig, axes = plt.subplots(2, 3, figsize=(15, 10))
 axes = axes.flatten()
 
 for i, metric in enumerate(list_metrics):
-    means = [metrics_summary[exp][f'{metric}_mean'] for exp in exponent]
-    stds = [metrics_summary[exp][f'{metric}_std'] for exp in exponent]
+    means = [metrics_summary[exp][f'{metric}_mean'] for exp in exponents]
+    stds = [metrics_summary[exp][f'{metric}_std'] for exp in exponents]
     
-    axes[i].errorbar(exponent, means, yerr=stds, fmt='-o', 
+    axes[i].errorbar(exponents, means, yerr=stds, fmt='-o', 
                     linewidth=0.75, elinewidth=1, capsize=2, 
                     capthick=1, markerfacecolor='none')
     axes[i].set_ylabel(metric)
@@ -118,18 +126,18 @@ for i, metric in enumerate(list_metrics):
     else:
         optimal_idx = np.argmin(means)
     
-    axes[i].axvline(exponent[optimal_idx], color='red', linestyle='--', 
-                   alpha=0.7, label=f'Optimal: {exponent[optimal_idx]:.3g}')
+    axes[i].axvline(exponents[optimal_idx], color='red', linestyle='--', 
+                   alpha=0.7, label=f'Optimal: {exponents[optimal_idx]:.3g}')
     axes[i].legend()
 
-fig.suptitle(f'{law} Model with {model} Constraints', fontsize=16)
+fig.suptitle(f'{law} Law with {model} Model', fontsize=16)
 fig.tight_layout()
 fig.show()
 
 # Print best exponent based on CPC
-cpc_means = [metrics_summary[exp]['CPC_mean'] for exp in exponent]
+cpc_means = [metrics_summary[exp]['CPC_mean'] for exp in exponents]
 best_exp_idx = np.argmax(cpc_means)
-best_exponent = exponent[best_exp_idx]
+best_exponent = exponents[best_exp_idx]
 
 print("\nResults Summary:")
 print(f"Law: {law}")
@@ -152,16 +160,17 @@ best_sim = tdlm.run_law_model(
     return_proba=True,
     random_seed=42
 )
+
 best_sim_gof = tdlm.gof(
     sim=best_sim['simulations'],
     obs=Tij_observed,
     distance=dij,
     measures="all"
 )
-# print("Observed matrix:")
-# print(Tij_observed)
-# print("Simulated matrix:")
-# print(best_sim['simulations'].squeeze().astype(int))
+print("Observed matrix:")
+print(Tij_observed)
+print("Simulated matrix:")
+print(best_sim['simulations'].squeeze().astype(int))
 print('Metrics:')
 print(best_sim_gof.to_markdown(index=False))
 
