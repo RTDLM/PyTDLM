@@ -45,10 +45,10 @@ markdown_extensions:
   - attr_list
   - md_in_html
   - admonition
-  - codehilite
   - toc:
       permalink: true
   - pymdownx.highlight:
+      use_pygments: true
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
@@ -58,6 +58,9 @@ markdown_extensions:
   - markdown_katex:
       no_inline_svg: True
       insert_fonts_css: True
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Home: index.md

@@ -79,6 +79,7 @@ dmypy.json
 .idea/
 *.swp
 *.swo
+*.dat
 
 # OS
 .DS_Store

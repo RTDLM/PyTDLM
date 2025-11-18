@@ -36,7 +36,7 @@ def _vprint(message, verbose):
         print(message)
 
 def extract_opportunities(
-    mass_destination: np.ndarray,
+    opportunity: np.ndarray,
     distance: np.ndarray,
     processes: Optional[int] = None,
     verbose: bool = True
@@ -47,8 +47,8 @@ def extract_opportunities(
     
     Parameters
     ----------
-    mass_destination : np.ndarray
-        Number of inhabitants at destination $`m_j`$
+    opportunity : np.ndarray
+        Number of opportunities
     distance : np.ndarray
         Distance matrix $`d_{i,j}`$ (n x n)
     processes : int, optional
@@ -61,7 +61,7 @@ def extract_opportunities(
     np.ndarray
         Opportunities matrix $`S_{i,j}`$ (n x n)
     """
-    n = len(mass_destination)
+    n = len(opportunity)
     
     # Validate inputs
     if distance.shape != (n, n):
@@ -74,7 +74,7 @@ def extract_opportunities(
     _vprint(f'Using {num_processes} parallel processes', verbose)
     
     # Prepare arguments for parallel processing
-    args_list = [(i, distance[i,:], mass_destination, n) for i in range(n)]
+    args_list = [(i, distance[i,:], opportunity, n) for i in range(n)]
     
     # Use multiprocessing to compute S matrix rows in parallel
     with mp.Pool(processes=num_processes) as pool:
@@ -189,7 +189,7 @@ def run_optimization(
     Returns
     -------
     pd.DataFrame
-        For each combination of law and model, resulting optimal exponent and corresponding goodness-of-fit measures.
+        For each combination of law and model, resulting optimal exponent and corresponding goodness-of-fit measure.
     """
     if average:
         repli = 1
@@ -399,7 +399,6 @@ def run_law_model_gof(
         # Parallel processing for multiple exponents
         _vprint(f'Simulating matrix and GOF for {law} with {model} model ({repli} replications)', verbose)
         _vprint(f'Using {num_processes_needed} parallel processes', verbose)
-        
         shm_list = [] # To track shared memory blocks for cleanup
         try:
             # Create shared memory for all large NumPy arrays
@@ -412,7 +411,6 @@ def run_law_model_gof(
                 'in_trips': _numpy_to_shm(in_trips, shm_list),
                 'obs': _numpy_to_shm(obs, shm_list)
             }
-            
             with mp.Pool(processes=num_processes_needed) as pool:
                 params = [(shm_info, pij, law, model, beta, repli, average, selected_measures) for beta in exponents]
                 results = list(tqdm(pool.imap(_process_exponent_gof_shared, params),
@@ -424,7 +422,6 @@ def run_law_model_gof(
             for shm in shm_list:
                 shm.close()
                 shm.unlink() # Destroys the shared memory block
-                
         # Organize results
         output = {}
         for i, exponent in enumerate(exponents):
@@ -1044,6 +1041,8 @@ def _shm_to_numpy(shm_meta):
     shm = shared_memory.SharedMemory(name=shm_name)
     # Create a NumPy array that points to the buffer, no data is copied
     arr = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
+    # Make shared arrays explicitly read-only to prevent any copy-on-write trigger
+    arr.flags.writeable = False
     return arr, shm
 
 def _process_exponent_shared(param):
@@ -1156,27 +1155,24 @@ def _process_exponent_gof_shared(params):
         
         # Keep track of all attached blocks to ensure they are closed
         attached_shms = [s for s in [shm_mo, shm_md, shm_d, shm_o, shm_ot, shm_it, shm_ob] if s is not None]
-
+                
         n = len(mi)
         
         if pij is None:
             pij = _proba(law, dij, sij, mi, mj, beta)
-        
         # Prepare observed data
-        pobs = (Tij / Tij.sum()).flatten()
+        pobs = (Tij / Tij.sum()).ravel()
         nb = np.sum(Tij)
         T_range = np.max(Tij) - np.min(Tij)
         
         # Calculate distance indices for CPCd
-        indices = np.floor(dij / 2).astype(int).flatten()
+        indices = np.floor(dij / 2).astype(int).ravel()
         max_index = indices.max() + 1
-        CDD_R = np.bincount(indices, weights=Tij.flatten(), minlength=max_index)
-        
+        CDD_R = np.bincount(indices, weights=Tij.ravel(), minlength=max_index)
         results = []
         for r in range(repli):
             # Simulated OD
             S = np.zeros((n, n))
-    
             # Network generation according to the constrained model
             if model == "UM":  # Unconstrained model
                 S = _UM(pij, Oi, average)
@@ -1186,7 +1182,6 @@ def _process_exponent_gof_shared(params):
                 S = _ACM(pij, Dj, average)
             elif model == "DCM":  # Doubly constrained model
                 S = _DCM(pij, Oi, Dj, 50, 0.01, average)
-            
             result_dict = {"Replication": r}
             
             if "CPC" in measures:
@@ -1233,13 +1228,12 @@ def _process_exponent_gof_shared(params):
             
             if "RMSE" in measures:
                 # NRMSE - Normalized Root Mean Square Error
-                if T_range > 0 and Tij.sum() > 0:
-                    mse = np.sum((Tij - S) ** 2) / Tij.sum()
+                if T_range > 0 and nb > 0:
+                    mse = np.sum((Tij - S) ** 2) / nb
                     nrmse = np.sqrt(mse)
                 else:
                     nrmse = 0
                 result_dict["RMSE"] = nrmse
-            
             results.append(result_dict)
             
         return pd.DataFrame(results)

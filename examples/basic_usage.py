@@ -187,7 +187,7 @@ results = tdlm.run_optimization(
     out_trips=Oi,
     in_trips=Dj,
     repli=5,
-    random_seed = 42
+    random_seed=42
 )
 print(f'Done in {timedelta(seconds=perf_counter() -start)}')
 opti_exponent = results.Exponent.values[0]

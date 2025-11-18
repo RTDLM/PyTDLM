@@ -253,7 +253,7 @@ used as a proxy for the number of opportunities.
 
 !!! note 
 
-	If not provided and required by the selected law (Schneider or RadExt), the opportunity matrix will be computed automatically by the `run_law_model_gof`, `run_law_model` and 		`run_law` functions, using by default $`m_j`$ as a proxy.
+	If not provided and required by the selected law (Schneider, Rad, or RadExt), the opportunity matrix will be computed automatically by the `run_optimization`, `run_law_model_gof`, `run_law_model`, and `run_law` functions, using $`m_j`$ by default as a proxy for the number of opportunities.
 
 ```python
 # Pre-computing the opportunity matrix
@@ -277,7 +277,7 @@ constraints (number of trips, out-going trips and/or in-coming trips). The funct
 	If multiple exponents are provided (in the form of a numpy array), the function will automatically distribute the computation of each exponent over multiple threads. This behavior can be disabled, thus processing the exponents sequentially, by passing the argument `#!python processes=1`.
 
 In the example below we compute the goodness-of-fit metrics over 5 realizations with the normalized gravity law 
-with an exponential distance decay function [@Lenormand2016] and the Doubly 
+with an exponential distance decay function ([Lenormand *et al.* (2016)](https://doi.org/10.1016/j.jtrangeo.2015.12.008)) and the Doubly 
 Constrained Model.
 
 ```python
@@ -440,7 +440,7 @@ Because we asked for the matrix of probabilities with `#!python return_proba=Tru
 ```python
 best_sim['simulations']
 ```
-```python
+```
 array([[[0., 0., 0., ..., 0., 0., 0.],
         [0., 0., 0., ..., 0., 0., 0.],
         [0., 0., 0., ..., 0., 0., 0.],
@@ -452,7 +452,7 @@ array([[[0., 0., 0., ..., 0., 0., 0.],
 ```python
 best_sim['probabilities']
 ```
-```python
+```
 array([[0.00000000e+00, 8.74609836e-12, 4.93394690e-09, ...,
         1.35301029e-82, 1.85685813e-79, 4.37188351e-72],
        [6.79892585e-12, 0.00000000e+00, 5.36646177e-13, ...,
@@ -480,7 +480,7 @@ best_sim_gof = tdlm.gof(
 print('Metrics:')
 print(best_sim_gof.to_markdown(index=False))
 ```
-```python
+```
 Metrics:
 |   Replication |      CPC |      CPL |     CPCd |   KS_stat |   KS_pval |    KL_div |    RMSE |
 |--------------:|---------:|---------:|---------:|----------:|----------:|----------:|--------:|
@@ -493,7 +493,7 @@ As performing the benchmark manually, trying out exponents range by hand, can be
 	This function comes with the potential risk of the minimizer getting stuck in a local minimum/maximum. We recommend checking the validity of the value found by `run_optimization` by creating a figure (as shown previously) with an interval of exponents centered on the result returned by the function.
 
 !!! note
-	If multiple realizations are requested (`repli` higher than 1), the function will automatically distribute the computation of each realization over multiple threads. This behavior can be disabled, thus processing the exponents sequentially, by passing the argument processes=1.
+	If multiple realizations are requested (`repli` higher than 1), the function will automatically distribute the computation of each realization over multiple threads. This behavior can be disabled, thus processing the exponents sequentially, by passing the argument `#!python processes=1`.
 
 ```python
 # Compare with scipy's minize_scalar result
@@ -509,13 +509,13 @@ results = tdlm.run_optimization(
     out_trips=Oi,
     in_trips=Dj,
     repli=5,
-    random_seed = 42
+    random_seed=42
 )
 print(f'Done in {timedelta(seconds=perf_counter() -start)}')
 opti_exponent = results.Exponent.values[0]
 print(f"Best exponent (highest CPC): β = {opti_exponent:.3g}")
 ```
-```python
+```
 Determining the optimal exponent with respect to CPC maximization
 
 Calculating average CPC for NGravExp with DCM over 5 realizations
@@ -559,7 +559,7 @@ best_sim_gof = tdlm.gof(
 print('Metrics:')
 print(best_sim_gof.to_markdown(index=False))
 ```
-```python
+```
 Sample simulation with optimal exponent (β = 0.07691254172739809):
 Simulating matrix for NGravExp β = 0.077 with DCM
 Done
