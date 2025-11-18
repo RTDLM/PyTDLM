@@ -1,5 +1,5 @@
 ---
-title: 'PyTDLM: Systematic comparison of trip distribution laws and models in Python'
+title: 'PyTDLM: A Python framework for the systematic comparison of trip distribution laws and models'
 tags:
 - Python
 - Spatial Interaction Models
@@ -32,98 +32,59 @@ bibliography: paper.bib
 
 # Summary
 
-Spatial interaction models are widely used to estimate and explain spatial
-interactions between geographical areas or locations. These models are usually 
-based on the characteristics of the locations and the way they are 
-spatially distributed. Several forms of interaction can occur between locations,
-one of which is population movements. This particular type of interaction is 
-widely examined in the fields of geography, transportation research, and 
-urban planning. The flows of individuals between locations is 
-usually represented by a trip table better known as an Origin-Destination (OD) 
-matrix [@Lenormand2016;@Barbosa2018]. The estimation of OD matrices is part of 
-the four-step travel model in transportation research. It corresponds to the 
-second step, called trip distribution, the aim of which is to match the trip 
-origins with the trip destinations using a spatial interaction model 
-commonly referred to as trip distribution model in the four-step travel 
-framework. 
+Spatial interaction models provide a quantitative description of how individuals, goods, or information move between locations. In transportation research and urban geography, these models are used to estimate **trip distribution**, the step of the classical four-stage transport modelling framework that allocates trip origins to trip destinations through an Origin–Destination (OD) matrix [@Lenormand2016; @Barbosa2018]. A variety of laws—such as gravity-type decay functions or intervening-opportunities mechanisms—and several modelling strategies have been proposed, but rigorous comparison is challenging when law and model components are tightly coupled.
 
-In order to facilitate the use and comparison of trip distribution models, and 
-more generally spatial distribution models, we present **TDML**, an R package 
-providing a set of easy-to-use functions to rigorously and fairly compare 
-trip distribution laws and models as described in @Lenormand2016.
+The *TDLM* framework was originally introduced to enable fair comparisons of trip distribution laws and models through a two-step procedure separating (i) the probability law governing the interaction process and (ii) the constrained model generating OD flows from that law. An implementation in R was published to facilitate adoption of this methodology.
+
+Built on NumPy and SciPy, **PyTDLM** provides a full, native Python implementation of this framework, complementing the original Java-backed R codebase and extending its capabilities. In addition to porting the core methodology, the package offers vectorized algorithms, parallel execution, and introduces new functionality that simplifies calibration workflows and improves computational performance, making the framework accessible to researchers working within the Python scientific ecosystem.
 
 # Statement of need
 
-Trip distribution models are generally composed of two mechanisms, one
-based on a 'law' to estimate the probability that an individual moves from one 
-location to another and a second based on a 'model' used to estimate 
-the number of individuals moving from one location to another. These two 
-mechanisms are rarely disentangled, which could lead to methodological flaws when 
-comparing different laws and/or models [@Lenormand2012;@Simini2012;@Masucci2013;
-@Yang2014]. This is particularly important when we compare the two historical
-approaches - gravity and intervening opportunities - for the estimation of 
-trip distribution. 
+Most trip distribution models combine two distinct mechanisms: a *law* that specifies how interaction probability decreases or increases with distance or opportunities, and a *model* that constrains flows according to marginal totals. When these components are not explicitly separated, comparisons between gravity-based and intervening-opportunities-based approaches can lead to misleading conclusions [@Lenormand2012; @Simini2012; @Masucci2013; @Yang2014]. 
 
-We identified several R packages providing an implementation of spatial 
-interaction models that can be used to estimate trip distributions. 
-The **gravity** package [@Wolwer2018], the **spflow** 
-package [@Dargel2021], the **mobility** package [@Giles2021], and the **simodels** 
-package [@Lovelace2023]. The **gravity**, **spflow**, and **mobility** packages 
-are based on statistical models and have not been designed to compare gravity 
-and intervening opportunities laws and constrained models independently. 
-Although the package structure and functionality of **simodels** are very 
-different from those of **TDLM**, it offers the possibility to compare trip 
-distribution laws and models independently. **simodels** proposes 
-an interesting approach by not defining (nor encouraging the use of) any 
-particular trip distribution laws, but this also makes the systematic comparison 
-of trip distribution laws more complicated for non-expert users. Furthermore, 
-**simodels** does not offer any functionality to systematically compare 
-observed and simulated OD matrices.
- 
-To overcome these limitations, the **TDML** R package is based on a two-step 
-approach to generate mobility flows by separating the trip distribution law 
-from the modeling approach used to generate the flows from this law. 
+Several R packages offer implementations of spatial interaction models, including **gravity** [@Wolwer2018], **spflow** [@Dargel2021], **mobility** [@Giles2021], and **simodels** [@Lovelace2023]. While valuable, these tools either integrate the law and model components in ways that hinder systematic comparison, or they do not provide built-in evaluation tools for contrasting observed and simulated OD matrices. The TDLM methodology addresses these limitations by making the decomposition of mechanisms explicit.
+
+The **PyTDLM** package responds to the need for a Python-native implementation that both reproduces the TDLM methodology and expands it to support high-performance computation and simplified calibration, while enabling integration with libraries such as NumPy, SciPy, Pandas, and Matplotlib.
 
 # Functionality
 
-**TDLM** is available on [CRAN](https://cran.r-project.org/package=TDLM) and 
-[GitHub](https://github.com/EpiVec/TDLM/). The **TDLM**'s website includes a [tutorial](https://epivec.github.io/TDLM/articles/TDLM.html) 
-describing the functions of this package with an illustrative example based on 
-commuting data from Kansas in the United States in 2000.
+**PyTDLM** is available on [PyPI](https://pypi.org/project/pytdlm), [conda-forge](https://anaconda.org/conda-forge/pytdlm) and 
+[GitHub](https://github.com/RTDLM/PyTDLM). Documentation and a [tutorial](https://rtdlm.github.io/PyTDLM/tutorial/) using United States commuting data are available on the package website.
 
-**TDLM** features four main functions for generating OD matrices
-based on a wide range of trip distribution laws and models and for evaluating
-the simulated matrices against observed data. 
+The package creates a pipeline for generating and validating OD matrices:
 
-* **run_law_model** is the main function of the package. This function estimates
-mobility flows using different distribution laws (four gravity laws, three 
-intervening opportunity laws, and a uniform law) and models (unconstrained, 
-production constrained, attraction constrained, and doubly constrained). The 
-function has two sets of arguments, one for the law and another one for the 
-model. 
+* **`run_law_model_gof`**
+  A new high-level function introduced in the Python version, designed for efficiency. It computes mobility flows and goodness-of-fit metrics in a single stepBy computing goodness-of-fit metrics on the fly without persisting intermediate simulated matrices, it significantly reduces memory overhead compared to the traditional stepwise approach. When several exponents are provided, computations are automatically dispatched to multiple threads.
 
-* **run_law** estimates mobility flows using different distribution laws. It 
-is based on the first step of the two-step proposed approach to generate a 
-probability distribution based on the different laws.
+* **`run_optimization`** 
+  A major addition to the Python port, this function automates parameter calibration. This function wraps `scipy.optimize.minimize_scalar` to determine the exponent that best maximizes or minimizes a selected goodness-of-fit measure. When multiple realizations are required, the function parallelizes the computation of realizations and passes averaged metrics to the optimizer.
 
-* **run_model** estimates mobility flows using different distribution models. It
-based on the second step of the two-step proposed approach to generate mobility 
-flow based on a matrix of probabilities using different constrained models.
+* **Core Components (`run_law`, `run_model`, `run_law_model`)**: These functions provide granular access to the two-step generation process and now also supports multi-exponent parallelization:
+    * `run_law`: Computes probability matrices based on spatial distribution laws (four variations of Gravity, three Intervening Opportunities, and Uniform).
+    * `run_model`: Converts probabilities into flow counts using constrained modeling approaches (Unconstrained, Production/Attraction Constrained, Doubly Constrained).
+    * `run_law_model`: A convenience wrapper executing both steps sequentially.
 
-* **gof** computes goodness-of-fit measures between observed and simulated 
-OD matrices. Six goodness-of-fit measures have been considered at this stage.
+* **gof**
+  Calculates six distinct goodness-of-fit measures to evaluate the accuracy of simulated matrices against observed data. Also supports multi-exponent parallelization.
 
-**TDLM** includes utility functions to check, format and generate the inputs 
-data and help to calibrate the trip distribution laws. 
 
-# Example
+Performance considerations guided much of the design. While the R version relied on Java for computational efficiency, PyTDLM is written entirely in Python. To maintain competitive performance, the implementation makes extensive use of NumPy broadcasting, vectorization, and shared-memory multiprocessing. Parallel tasks are dispatched through `multiprocessing` pools, with data exchanged via `shared_memory` blocks, which mitigate the overhead associated with `spawn()`-based process creation on Windows and macOS and reduce copy-on-write penalties on Linux.
 
-Comparison with the R version (time...)
+# Benchmarks
+
+**Validation**
+To validate the Python implementation, we performed a systematic comparison against the original [Java implementation](https://github.com/maximelenormand/Trip-distribution-laws-and-models). We reproduced some case studies presented in @Lenormand2016. Figure 1 (right) displays the PyTDLM results, while Figure 1 (left) shows the original results. Across several countries, laws, models, and goodness-of-fit metrics, the results were consistent between the two implementations.
+
+![Common part of commuters according to the unconstrained models, the gravity and intervening opportunities laws for six case studies. Left: Java implementation, modified from Fig3 @@Lenormand2016, with permission of the authors. Right: PyTDLM.](validation.png)
+
+**Performance**
+We benchmarked the wall-clock execution time of both packages using the example based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with an 18-thread CPU @4.6GHz and 64GB RAM. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
+
 
 # Acknowledgements
 
-This work was supported by the Institute of Computing and Data Sciences 
-(Project ESTIMIA) and the French National Research Agency 
-(Project MOSIS, ANR-24-CE38-5528). 
+This work was supported by the Institute of Computing and Data Sciences (Project ESTIMIA) and the French National Research Agency (Project MOSIS, ANR-24-CE38-5528).
+The validation simulations were performed on the SACADO MeSU platform at Sorbonne Université.
 
 # References
+
