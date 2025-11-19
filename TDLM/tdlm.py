@@ -913,12 +913,20 @@ def gof(
     
     # Handle single vs multiple simulations
     if isinstance(sim, dict):
-        exponents = list(sim.keys())
-        single_simulation = len(exponents) == 1
-        
-        if len(exponents) > 1 and num_processes > 1:
-            num_processes_needed = min(len(exponents), num_processes)
+        if 'simulations' in sim.keys():
+            # Single exponent with proba
+            _vprint('Calculating GOF measures', verbose)
+            result = _calculate_gof((sim['simulations'], obs, distance, selected_measures))
+            _vprint('Done\n', verbose)
+            return result
+        else:
+            # Multiple exponents
+            exponents = list(sim.keys())
+            proba_included = isinstance(sim[exponents[0]], dict)
+ 
+        if num_processes > 1:
             # Parallel processing for multiple exponents
+            num_processes_needed = min(len(exponents), num_processes)
             _vprint(f'Calculating GOF measures for {len(exponents)} exponents', verbose)
             _vprint(f'Using {num_processes_needed} parallel processes', verbose)
             
@@ -933,7 +941,10 @@ def gof(
                 with mp.Pool(processes=num_processes_needed) as pool:
                     # Prepare parameters for the new shared worker function
                     # Pass the dict of shared memory info instead of the raw data
-                    params = [(shm_info, sim[exponent], selected_measures) for exponent in exponents]
+                    if proba_included:
+                        params = [(shm_info, sim[exponent]['simulations'], selected_measures) for exponent in exponents]
+                    else:
+                        params = [(shm_info, sim[exponent], selected_measures) for exponent in exponents]
                     
                     results = list(tqdm(pool.imap(_calculate_gof_shared, params), 
                                   total=len(exponents), desc='Computing GOF measures', disable=not verbose))
@@ -956,21 +967,18 @@ def gof(
         else:
             # Sequential processing
             results = {}
-            if single_simulation:
-                exponent = exponents[0]
-                _vprint(f'Calculating GOF measures for exponent {exponent}', verbose)
-                params = (sim[exponent], obs, distance, selected_measures)
-                results[exponent] = _calculate_gof(params)
-            else:
-                _vprint(f'Calculating GOF measures for {len(exponents)} exponents', verbose)
-                for exponent in tqdm(exponents, desc='Computing GOF measures', disable=not verbose):
+            _vprint(f'Calculating GOF measures for {len(exponents)} exponents', verbose)
+            for exponent in tqdm(exponents, desc='Computing GOF measures', disable=not verbose):
+                if proba_included:
+                    params = (sim[exponent]['simulations'], obs, distance, selected_measures)
+                else:
                     params = (sim[exponent], obs, distance, selected_measures)
-                    results[exponent] = _calculate_gof(params)
+                results[exponent] = _calculate_gof(params)
             
             _vprint('Done\n', verbose)
             return results
     else:
-        # Single simulation matrix
+        # Single exponent no proba
         _vprint('Calculating GOF measures', verbose)
         result = _calculate_gof((sim, obs, distance, selected_measures))
         _vprint('Done\n', verbose)

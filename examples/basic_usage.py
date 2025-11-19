@@ -162,7 +162,7 @@ best_sim = tdlm.run_law_model(
 )
 
 best_sim_gof = tdlm.gof(
-    sim=best_sim['simulations'],
+    sim=best_sim,
     obs=Tij_observed,
     distance=dij,
     measures="all"
@@ -209,7 +209,7 @@ best_sim = tdlm.run_law_model(
 )
 
 best_sim_gof = tdlm.gof(
-    sim=best_sim['simulations'],
+    sim=best_sim,
     obs=Tij_observed,
     distance=dij,
     measures="all"
