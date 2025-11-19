@@ -54,10 +54,10 @@ The **PyTDLM** package responds to the need for a Python-native implementation t
 The package creates a pipeline for generating and validating OD matrices:
 
 * **`run_law_model_gof`**
-  A new high-level function introduced in the Python version, designed for efficiency. It computes mobility flows and goodness-of-fit metrics in a single stepBy computing goodness-of-fit metrics on the fly without persisting intermediate simulated matrices, it significantly reduces memory overhead compared to the traditional stepwise approach. When several exponents are provided, computations are automatically dispatched to multiple threads.
+  A new high-level function introduced in the Python version, designed for efficiency. It computes mobility flows and goodness-of-fit metrics in a single step. By computing goodness-of-fit metrics on the fly without persisting intermediate simulated matrices, it significantly reduces memory overhead compared to the traditional stepwise approach. When several exponents are provided, computations are automatically dispatched to multiple threads.
 
 * **`run_optimization`** 
-  A major addition to the Python port, this function automates parameter calibration. This function wraps `scipy.optimize.minimize_scalar` to determine the exponent that best maximizes or minimizes a selected goodness-of-fit measure. When multiple realizations are required, the function parallelizes the computation of realizations and passes averaged metrics to the optimizer.
+  A major addition to the Python port, this function automates parameter calibration. This function wraps `scipy.optimize.minimize_scalar` to determine the exponent that best maximizes or minimizes a selected goodness-of-fit measure. When multiple realizations are requested, the function parallelizes the computation of realizations and passes averaged metrics to the optimizer.
 
 * **Core Components (`run_law`, `run_model`, `run_law_model`)**: These functions provide granular access to the two-step generation process and now also supports multi-exponent parallelization:
     * `run_law`: Computes probability matrices based on spatial distribution laws (four variations of Gravity, three Intervening Opportunities, and Uniform).
@@ -80,7 +80,7 @@ To validate the Python implementation, we performed a systematic comparison agai
 **Performance**
 We benchmarked the wall-clock execution time of both packages using the example based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with a 2024 18-thread \@4.6GHz CPU. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
 
-![Comparison of R TDLM vs PyTDLM wall clock execution time. Measurements were averaged over 100 executions of each function. `run_law_model` was run with the following parameters: `law="NGravExp", model="DCM", repli=10, return_proba=True`](runtime.png){ width=50% }
+![Comparison of R TDLM vs PyTDLM wall clock execution time, in seconds. Measurements were averaged over 100 executions of each function. `run_law_model` was run with the following parameters: `law="NGravExp", model="DCM", repli=10, return_proba=True`](runtime.png){ width=50% }
 
 
 # Acknowledgements
