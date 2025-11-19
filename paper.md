@@ -80,7 +80,7 @@ To validate the Python implementation, we performed a systematic comparison agai
 **Performance**
 We benchmarked the wall-clock execution time of both packages using the example based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with an 18-thread CPU @4.6GHz and 64GB RAM. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
 
-![Comparison of R TDLM vs PyTDLM wallclock execution time. Measurements were averaged over 100 execution of each function. `run_law_model` was run with the following parameters: `!#python law="NGravExp", model="DCM", repli=10, return_proba=True`](runtime.png)
+![Comparison of R TDLM vs PyTDLM wallclock execution time. Measurements were averaged over 100 execution of each function. `run_law_model` was run with the following parameters:`law="NGravExp", model="DCM", repli=10, return_proba=True`](runtime.png){ width=50% }
 
 
 # Acknowledgements
