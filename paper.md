@@ -34,7 +34,7 @@ bibliography: paper.bib
 
 Spatial interaction models provide a quantitative description of how individuals, goods, or information move between locations. In transportation research and urban geography, these models are used to estimate **trip distribution**, the step of the classical four-stage transport modelling framework that allocates trip origins to trip destinations through an Origin–Destination (OD) matrix [@Lenormand2016; @Barbosa2018]. A variety of laws—such as gravity-type decay functions or intervening-opportunities mechanisms—and several modelling strategies have been proposed, but rigorous comparison is challenging when law and model components are tightly coupled.
 
-The *TDLM* framework was originally introduced to enable fair comparisons of trip distribution laws and models through a two-step procedure separating (i) the probability law governing the interaction process and (ii) the constrained model generating OD flows from that law. An implementation in R was published to facilitate adoption of this methodology.
+The *TDLM* framework was originally introduced to enable fair comparisons of trip distribution laws and models through a two-step procedure separating (i) the probability law governing the interaction process and (ii) the constrained model generating OD flows from that law. An implementation in R was published to facilitate adoption of this methodology [@Lenormand2023].
 
 Built on NumPy and SciPy, **PyTDLM** provides a full, native Python implementation of this framework, complementing the original Java-backed R codebase and extending its capabilities. In addition to porting the core methodology, the package offers vectorized algorithms, parallel execution, and introduces new functionality that simplifies calibration workflows and improves computational performance, making the framework accessible to researchers working within the Python scientific ecosystem.
 
@@ -75,12 +75,12 @@ Performance considerations guided much of the design. While the R version relied
 **Validation**
 To validate the Python implementation, we performed a systematic comparison against the original [Java implementation](https://github.com/maximelenormand/Trip-distribution-laws-and-models). We reproduced some case studies presented in @Lenormand2016. Figure 1 (right) displays the PyTDLM results, while Figure 1 (left) shows the original results. Across several countries, laws, models, and goodness-of-fit metrics, the results were consistent between the two implementations.
 
-![Common part of commuters according to the unconstrained models, the gravity and intervening opportunities laws for six case studies. Left: Java implementation, modified from Fig3 @@Lenormand2016, with permission of the authors. Right: PyTDLM.](validation.png)
+![Common part of commuters according to the unconstrained models, the gravity and intervening opportunities laws for six case studies. Left: Java implementation, modified from Fig3 @Lenormand2016, with permission of the authors. Right: PyTDLM.](validation.png)
 
 **Performance**
-We benchmarked the wall-clock execution time of both packages using the example based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with an 18-thread CPU @4.6GHz and 64GB RAM. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
+We benchmarked the wall-clock execution time of both packages using the example based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with a 2024 18-thread \@4.6GHz CPU. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
 
-![Comparison of R TDLM vs PyTDLM wallclock execution time. Measurements were averaged over 100 execution of each function. `run_law_model` was run with the following parameters:`law="NGravExp", model="DCM", repli=10, return_proba=True`](runtime.png){ width=50% }
+![Comparison of R TDLM vs PyTDLM wall clock execution time. Measurements were averaged over 100 executions of each function. `run_law_model` was run with the following parameters: `law="NGravExp", model="DCM", repli=10, return_proba=True`](runtime.png){ width=50% }
 
 
 # Acknowledgements
