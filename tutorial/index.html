@@ -1093,10 +1093,8 @@ simulated flow distance distributions.</p>
 <hr />
 <h2 id="example-of-commuting-in-kansas">Example of commuting in Kansas<a class="headerlink" href="#example-of-commuting-in-kansas" title="Permanent link">&para;</a></h2>
 <h3 id="data">Data<a class="headerlink" href="#data" title="Permanent link">&para;</a></h3>
-<p>In this example, also provided as the <a href="https://github.com/RTDLM/PyTDLM/blob/main/examples/basic_usage.py"><code>basic_usage.py</code> script</a>, we will use commuting data from US Kansas in 2000 to illustrate
-the main functions of the package. The dataset comprises three tables providing 
-information on commuting flows between the 105 US 
-Kansas counties in 2000. </p>
+<p>In this example, also provided as the <a href="https://github.com/RTDLM/PyTDLM/blob/main/examples/basic_usage.py"><code>basic_usage.py</code> script</a>, we will use data on commuting trips between United States counties in 2000 from the United State Census Bureau (data available online at https://www.census.gov/population/www/cen2000/commuting/index.html) to illustrate
+the main functions of the package.</p>
 <p>The masses and margins are contained in the <a href="https://github.com/RTDLM/PyTDLM/blob/main/examples/data_US/Inputs.csv"><code>Inputs.csv</code> file</a>.
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">gzip</span>
@@ -1317,7 +1315,7 @@ Constrained Model.</p>
 </span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>    <span class="n">random_seed</span><span class="o">=</span><span class="mi">42</span>
 </span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="p">)</span>
 </span></code></pre></div>
-Because we asked for the matrix of probabilities with <code class="language-python highlight"><span class="n">return_proba</span><span class="o">=</span><span class="kc">True</span></code>, the output is a dictionnary with the simulated ODs matrix (or matrices should <code>repli</code> be more than 1) under the key <code class="language-python highlight"><span class="s1">&#39;simulations&#39;</span></code>, and the matrix of probabilities under the key <code>'probabilities'</code>.</p>
+Because we asked for the matrix of probabilities with <code class="language-python highlight"><span class="n">return_proba</span><span class="o">=</span><span class="kc">True</span></code>, the output is a dictionnary with the simulated ODs matrix (or matrices should <code>repli</code> be more than 1) under the key <code class="language-python highlight"><span class="s1">&#39;simulations&#39;</span></code>, and the matrix of probabilities under the key <code class="language-python highlight"><span class="s1">&#39;probabilities&#39;</span></code>.</p>
 <p><div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">best_sim</span><span class="p">[</span><span class="s1">&#39;simulations&#39;</span><span class="p">]</span>
 </span></code></pre></div>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>array([[[0., 0., 0., ..., 0., 0., 0.],
@@ -1347,7 +1345,7 @@ Because we asked for the matrix of probabilities with <code class="language-pyth
 </span></code></pre></div></p>
 <p>We can compute the goodness-of-fit for pre-existing simulated ODs matrix (or matrices) using the function <code>gof</code>.
 <div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">best_sim_gof</span> <span class="o">=</span> <span class="n">tdlm</span><span class="o">.</span><span class="n">gof</span><span class="p">(</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">sim</span><span class="o">=</span><span class="n">best_sim</span><span class="p">[</span><span class="s1">&#39;simulations&#39;</span><span class="p">],</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">sim</span><span class="o">=</span><span class="n">best_sim</span><span class="p">,</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">obs</span><span class="o">=</span><span class="n">Tij_observed</span><span class="p">,</span>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">distance</span><span class="o">=</span><span class="n">dij</span><span class="p">,</span>
 </span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="n">measures</span><span class="o">=</span><span class="s2">&quot;all&quot;</span>
@@ -1405,7 +1403,7 @@ Because we asked for the matrix of probabilities with <code class="language-pyth
 </span></code></pre></div></p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>By default, the function will print every try of exponent, which can lead to a lengthy output. This can be suppressed by passing the argument <code>verbose=False</code>.</p>
+<p>By default, the function will print every try of exponent, which can lead to a lengthy output. This can be suppressed by passing the argument <code class="language-python highlight"><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span></code>.</p>
 </div>
 <p>We can then generate the simulated ODs and compute the goodness-of-fit metrics as shown before, and compare with what we obtained with the manual range.
 <div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Sample simulation with optimal exponent (β = </span><span class="si">{</span><span class="n">opti_exponent</span><span class="si">}</span><span class="s2">):&quot;</span><span class="p">)</span>
@@ -1424,7 +1422,7 @@ Because we asked for the matrix of probabilities with <code class="language-pyth
 </span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a><span class="p">)</span>
 </span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>
 </span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="n">best_sim_gof</span> <span class="o">=</span> <span class="n">tdlm</span><span class="o">.</span><span class="n">gof</span><span class="p">(</span>
-</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>    <span class="n">sim</span><span class="o">=</span><span class="n">best_sim</span><span class="p">[</span><span class="s1">&#39;simulations&#39;</span><span class="p">],</span>
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>    <span class="n">sim</span><span class="o">=</span><span class="n">best_sim</span><span class="p">,</span>
 </span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>    <span class="n">obs</span><span class="o">=</span><span class="n">Tij_observed</span><span class="p">,</span>
 </span><span id="__span-20-19"><a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a>    <span class="n">distance</span><span class="o">=</span><span class="n">dij</span><span class="p">,</span>
 </span><span id="__span-20-20"><a id="__codelineno-20-20" name="__codelineno-20-20" href="#__codelineno-20-20"></a>    <span class="n">measures</span><span class="o">=</span><span class="s2">&quot;all&quot;</span>
