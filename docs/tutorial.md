@@ -183,10 +183,8 @@ simulated flow distance distributions.
 
 ### Data
 
-In this example, also provided as the [`basic_usage.py` script](https://github.com/RTDLM/PyTDLM/blob/main/examples/basic_usage.py), we will use commuting data from US Kansas in 2000 to illustrate
-the main functions of the package. The dataset comprises three tables providing 
-information on commuting flows between the 105 US 
-Kansas counties in 2000. 
+In this example, also provided as the [`basic_usage.py` script](https://github.com/RTDLM/PyTDLM/blob/main/examples/basic_usage.py), we will use data on commuting trips between United States counties in 2000 from the United State Census Bureau (data available online at https://www.census.gov/population/www/cen2000/commuting/index.html) to illustrate
+the main functions of the package.
 
 The masses and margins are contained in the [`Inputs.csv` file](https://github.com/RTDLM/PyTDLM/blob/main/examples/data_US/Inputs.csv).
 ```python
@@ -435,7 +433,7 @@ best_sim = tdlm.run_law_model(
     random_seed=42
 )
 ```
-Because we asked for the matrix of probabilities with `#!python return_proba=True`, the output is a dictionnary with the simulated ODs matrix (or matrices should `repli` be more than 1) under the key `#!python 'simulations'`, and the matrix of probabilities under the key `#! 'probabilities'`.
+Because we asked for the matrix of probabilities with `#!python return_proba=True`, the output is a dictionnary with the simulated ODs matrix (or matrices should `repli` be more than 1) under the key `#!python 'simulations'`, and the matrix of probabilities under the key `#!python 'probabilities'`.
 
 ```python
 best_sim['simulations']
@@ -472,7 +470,7 @@ array([[0.00000000e+00, 8.74609836e-12, 4.93394690e-09, ...,
 We can compute the goodness-of-fit for pre-existing simulated ODs matrix (or matrices) using the function `gof`.
 ```python
 best_sim_gof = tdlm.gof(
-    sim=best_sim['simulations'],
+    sim=best_sim,
     obs=Tij_observed,
     distance=dij,
     measures="all"
@@ -531,7 +529,7 @@ Done in 0:03:57.995637
 Best exponent (highest CPC): β = 0.0769
 ```
 !!! tip
-	By default, the function will print every try of exponent, which can lead to a lengthy output. This can be suppressed by passing the argument `#! verbose=False`.
+	By default, the function will print every try of exponent, which can lead to a lengthy output. This can be suppressed by passing the argument `#!python verbose=False`.
 	
 We can then generate the simulated ODs and compute the goodness-of-fit metrics as shown before, and compare with what we obtained with the manual range.
 ```python
@@ -551,7 +549,7 @@ best_sim = tdlm.run_law_model(
 )
 
 best_sim_gof = tdlm.gof(
-    sim=best_sim['simulations'],
+    sim=best_sim,
     obs=Tij_observed,
     distance=dij,
     measures="all"
