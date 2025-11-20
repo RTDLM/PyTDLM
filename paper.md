@@ -7,7 +7,7 @@ tags:
 - Commuting networks
 - Gravity model
 - Radiation model
-date: "11 September 2025"
+date: "20 November 2025"
 output: pdf_document
 authors:
 - name: "Rémi Perrier"
@@ -32,7 +32,14 @@ bibliography: paper.bib
 
 # Summary
 
-Spatial interaction models provide a quantitative description of how individuals, goods, or information move between locations. In transportation research and urban geography, these models are used to estimate **trip distribution**, the step of the classical four-stage transport modelling framework that allocates trip origins to trip destinations through an Origin–Destination (OD) matrix [@Lenormand2016; @Barbosa2018]. A variety of laws—such as gravity-type decay functions or intervening-opportunities mechanisms—and several modelling strategies have been proposed, but rigorous comparison is challenging when law and model components are tightly coupled.
+Spatial interaction models provide a quantitative description of how individuals, 
+goods, or information move between locations. In transportation research and urban 
+geography, these models are used to estimate **trip distribution**, the step of 
+the classical four-stage transport modelling framework that allocates trip origins 
+to trip destinations through an Origin–Destination (OD) matrix [@Lenormand2016; @Barbosa2018]. 
+A variety of laws, such as gravity-type decay functions or intervening-opportunities 
+mechanisms, and several modelling strategies have been proposed, but rigorous comparison 
+is challenging when law and model components are tightly coupled.
 
 The *TDLM* framework was originally introduced to enable fair comparisons of trip distribution laws and models through a two-step procedure separating (i) the probability law governing the interaction process and (ii) the constrained model generating OD flows from that law. An implementation in R was published to facilitate adoption of this methodology [@Lenormand2023].
 
