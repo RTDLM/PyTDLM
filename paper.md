@@ -49,7 +49,7 @@ Built on NumPy and SciPy, **PyTDLM** provides a full, native Python implementati
 
 Most trip distribution models combine two distinct mechanisms: a *law* that specifies how interaction probability decreases or increases with distance or opportunities, and a *model* that constrains flows according to marginal totals. When these components are not explicitly separated, comparisons between gravity-based and intervening-opportunities-based approaches can lead to misleading conclusions [@Lenormand2012; @Simini2012; @Masucci2013; @Yang2014]. 
 
-Several R packages offer implementations of spatial interaction models, including **gravity** [@Wolwer2018], **spflow** [@Dargel2021], **mobility** [@Giles2021], and **simodels** [@Lovelace2023]. While valuable, these tools either integrate the law and model components in ways that hinder systematic comparison, or they do not provide built-in evaluation tools for contrasting observed and simulated OD matrices. The TDLM methodology addresses these limitations by making the decomposition of mechanisms explicit.
+Several R packages offer implementations of spatial interaction models, including **gravity** [@Wolwer2018], **spflow** [@Dargel2021], **mobility** [@Giles2021], and **simodels** [@Lovelace2023]. While valuable, these tools either integrate the law and model components in ways that hinder systematic comparison, or they do not provide built-in evaluation tools for contrasting observed and simulated OD matrices. This observation also applies to the Python ecosystem, where libraries such as **scikit-mobility** [@Pappalardo2022] or **SpInt** [@Oshan_2016] present the same caveats. The TDLM methodology addresses these limitations by making the decomposition of mechanisms explicit.
 
 The **PyTDLM** package responds to the need for a Python-native implementation that both reproduces the TDLM methodology and expands it to support high-performance computation and simplified calibration, while enabling integration with libraries such as NumPy, SciPy, Pandas, and Matplotlib.
 
@@ -87,7 +87,7 @@ To validate the Python implementation, we performed a systematic comparison agai
 **Performance**
 We benchmarked the wall-clock execution time of both packages using the example based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with a 2024 18-thread \@4.6GHz CPU. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
 
-![Comparison of R TDLM vs PyTDLM wall clock execution time, in seconds. Measurements were averaged over 100 executions of each function. `run_law_model` was run with the following parameters: `law="NGravExp", model="DCM", repli=10, return_proba=True`](runtime.png){ width=50% }
+![Comparison of R TDLM vs PyTDLM wall clock execution time, in seconds. Measurements were averaged over 100 executions of each function. `run_law_model` was run with the following parameters: `law="NGravExp", model="DCM", repli=10, return_proba=True`](runtime.png){ width=75% }
 
 
 # Acknowledgements
