@@ -64,7 +64,7 @@ The package creates a pipeline for generating and validating OD matrices:
   A new high-level function introduced in the Python version, designed for efficiency. It computes mobility flows and goodness-of-fit metrics in a single step. By computing goodness-of-fit metrics on the fly without persisting intermediate simulated matrices, it significantly reduces memory overhead compared to the traditional stepwise approach. When several exponents are provided, computations are automatically dispatched to multiple threads.
 
 * **`run_optimization`** 
-  A major addition to the Python port, this function automates parameter calibration. This function wraps `scipy.optimize.minimize_scalar` to determine the exponent that best maximizes or minimizes a selected goodness-of-fit measure. When multiple realizations are requested, the function parallelizes the computation of realizations and passes averaged metrics to the optimizer.
+  A major addition to the Python port, this function automates parameter calibration. This function wraps `scipy.optimize.minimize_scalar` to determine the exponent that best maximizes or minimizes a selected goodness-of-fit measure. When multiple realizations are requested, the function parallelizes the computation of realizations and passes the averaged metric to the optimizer.
 
 * **Core Components (`run_law`, `run_model`, `run_law_model`)**: These functions provide granular access to the two-step generation process and now also supports multi-exponent parallelization:
     * `run_law`: Computes probability matrices based on spatial distribution laws (four variations of Gravity, three Intervening Opportunities, and Uniform).
@@ -82,7 +82,7 @@ Performance considerations guided much of the design. While the R version relied
 **Validation**
 To validate the Python implementation, we performed a systematic comparison against the original [Java implementation](https://github.com/maximelenormand/Trip-distribution-laws-and-models). We reproduced some case studies presented in @Lenormand2016. Figure 1 (right) displays the PyTDLM results, while Figure 1 (left) shows the original results. Across several countries, laws, models, and goodness-of-fit metrics, the results were consistent between the two implementations.
 
-![Common part of commuters according to the unconstrained models, the gravity and intervening opportunities laws for six case studies. Left: Java implementation, modified from Fig3 @Lenormand2016, with permission of the authors. Right: PyTDLM.](validation.png){ width=110%}
+![Common part of commuters according to the unconstrained models, the gravity and intervening opportunities laws for six case studies. Left: Java implementation, modified from Fig3 @Lenormand2016, with permission of the authors. Right: PyTDLM.](validation.png)
 
 **Performance**
 We benchmarked the wall-clock execution time of both packages using [the example](https://rtdlm.github.io/TDLM/articles/TDLM.html#example-of-commuting-in-kansas) based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with a 2024 18-thread \@4.6GHz CPU. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
