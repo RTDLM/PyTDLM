@@ -82,10 +82,10 @@ Performance considerations guided much of the design. While the R version relied
 **Validation**
 To validate the Python implementation, we performed a systematic comparison against the original [Java implementation](https://github.com/maximelenormand/Trip-distribution-laws-and-models). We reproduced some case studies presented in @Lenormand2016. Figure 1 (right) displays the PyTDLM results, while Figure 1 (left) shows the original results. Across several countries, laws, models, and goodness-of-fit metrics, the results were consistent between the two implementations.
 
-![Common part of commuters according to the unconstrained models, the gravity and intervening opportunities laws for six case studies. Left: Java implementation, modified from Fig3 @Lenormand2016, with permission of the authors. Right: PyTDLM.](validation.png)
+![Common part of commuters according to the unconstrained models, the gravity and intervening opportunities laws for six case studies. Left: Java implementation, modified from Fig3 @Lenormand2016, with permission of the authors. Right: PyTDLM.](validation.png){ width=110%}
 
 **Performance**
-We benchmarked the wall-clock execution time of both packages using the example based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with a 2024 18-thread \@4.6GHz CPU. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
+We benchmarked the wall-clock execution time of both packages using [the example](https://rtdlm.github.io/TDLM/articles/TDLM.html#example-of-commuting-in-kansas) based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with a 2024 18-thread \@4.6GHz CPU. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
 
 ![Comparison of R TDLM vs PyTDLM wall clock execution time, in seconds. Measurements were averaged over 100 executions of each function. `run_law_model` was run with the following parameters: `law="NGravExp", model="DCM", repli=10, return_proba=True`.](runtime.png){ width=65% }
 
