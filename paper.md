@@ -7,7 +7,7 @@ tags:
 - Commuting networks
 - Gravity model
 - Radiation model
-date: "20 November 2025"
+date: "21 November 2025"
 output: pdf_document
 authors:
 - name: "Rémi Perrier"
@@ -87,7 +87,7 @@ To validate the Python implementation, we performed a systematic comparison agai
 **Performance**
 We benchmarked the wall-clock execution time of both packages using the example based on commuting data from Kansas in the United States in 2000. Tests were conducted on an Ubuntu 24.03.1 system equipped with a 2024 18-thread \@4.6GHz CPU. As shown in Figure 2, PyTDLM demonstrates competitive performance, benefiting from vectorization and effective parallelization strategies.
 
-![Comparison of R TDLM vs PyTDLM wall clock execution time, in seconds. Measurements were averaged over 100 executions of each function. `run_law_model` was run with the following parameters: `law="NGravExp", model="DCM", repli=10, return_proba=True`](runtime.png){ width=75% }
+![Comparison of R TDLM vs PyTDLM wall clock execution time, in seconds. Measurements were averaged over 100 executions of each function. `run_law_model` was run with the following parameters: `law="NGravExp", model="DCM", repli=10, return_proba=True`.](runtime.png){ width=65% }
 
 
 # Acknowledgements
