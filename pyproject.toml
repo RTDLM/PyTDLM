@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PyTDLM"
+dynamic = ["version"]
+description = "Systematic comparison of trip distribution laws and models in Python"
+readme = "README.md"
+license = {text = "GPL-3.0"}
+maintainers = [
+    {name = "Rémi Perrier", email = "remi.perrier@cnrs.fr"},
+    {name = "Maxime Lenormand", email = "maxime.lenormand@inrae.fr"}
+]
+keywords = ["spatial-interaction", "gravity-model", "trip-distribution"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.20.0",
+    "pandas>=1.3.0",
+    "scipy>=1.8.0",
+    "tabulate>=0.9.0",
+    "tqdm>=4.60.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov>=2.0",
+    "black>=22.0",
+    "flake8>=4.0",
+    "isort>=5.0",
+]
+docs = [
+    "sphinx>=4.0",
+    "sphinx-rtd-theme>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/RTDLM/PyTDLM"
+Repository = "https://github.com/RTDLM/PyTDLM"
+Documentation = "https://rtdlm.github.io/PyTDLM/"
+"Bug Tracker" = "https://github.com/RTDLM/PyTDLM/issues"
+
+[tool.setuptools.packages.find]
+include = ["TDLM*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "TDLM.__version__"}
