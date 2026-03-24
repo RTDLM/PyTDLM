@@ -5,6 +5,11 @@ hide:
 
 # What's new
 
+## v0.2.2 - Mar 24, 2026
+- Modify DCM : now uses PCM instead of UM
+- Fix handling of zeroes in the marginals in DMC
+- Add `eps` parameter to the `_DCM()` function: allows to chose the value used to replace zero values in the marginals of the DCM
+
 ## v0.2.1 - Nov 21, 2025
 - Align parameter name in `extract_opportunity` with R package
 - Fix `gof` to support results with probabilities
