@@ -140,6 +140,7 @@ def run_optimization(
     model: Union[str, List[str]] = "all",
     out_trips: Optional[np.ndarray] = None,
     in_trips: Optional[np.ndarray] = None,
+    eps: float = 1e-6,
     average: bool = False,
     repli: int = 1,
     measure: str = "CPC",
@@ -173,6 +174,8 @@ def run_optimization(
         Number of out-commuters $`O_i`$. Required for constrained models.
     in_trips : np.ndarray, optional
         Number of in-commuters $`D_j`$. Required for ACM and DCM models.
+    eps: float, default 1e-6
+        Strictly positive value used to replace any zero values in the marginals of the DCM
     average : bool, default False
         Whether the average mobility flow matrix should be generated instead of the `repli` matrices based on random draws.
     repli : int, default 1
@@ -265,7 +268,7 @@ def run_optimization(
         for j, m in enumerate(selected_models):
             result_dict= {'Law':l, 'Model':m}
             _vprint(f'\nCalculating average {measure} for {l} with {m} over {repli} realizations', verbose)
-            params = [l, m, measure, mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs, average, repli, processes, verbose]
+            params = [l, m, measure, mass_origin, mass_destination, distance, opportunity, out_trips, in_trips, obs, eps, average, repli, processes, verbose]
             
             if l in ['GravExp', 'NGravExp']:
                 bounds = (0,1)
@@ -299,6 +302,7 @@ def run_law_model_gof(
     model: str = "UM",
     out_trips: Optional[np.ndarray] = None,
     in_trips: Optional[np.ndarray] = None,
+    eps: float = 1e-6,
     average: bool = False,
     repli: int = 1,
     measures: Union[str, List[str]] = "all",
@@ -333,6 +337,8 @@ def run_law_model_gof(
         Number of out-commuters $`O_i`$. Required for constrained models.
     in_trips : np.ndarray, optional
         Number of in-commuters $`D_j`$. Required for ACM and DCM models.
+    eps: float, default 1e-6
+        Strictly positive value used to replace any zero values in the marginals of the DCM
     average : bool, default False
         Whether the average mobility flow matrix should be generated instead of the `repli` matrices based on random draws.
     repli : int, default 1
@@ -412,7 +418,7 @@ def run_law_model_gof(
                 'obs': _numpy_to_shm(obs, shm_list)
             }
             with mp.Pool(processes=num_processes_needed) as pool:
-                params = [(shm_info, pij, law, model, beta, repli, average, selected_measures) for beta in exponents]
+                params = [(shm_info, pij, law, model, beta, repli, eps, average, selected_measures) for beta in exponents]
                 results = list(tqdm(pool.imap(_process_exponent_gof_shared, params),
                                     total=len(exponents), desc='Computing exponents', disable=not verbose))
         finally:
@@ -437,14 +443,14 @@ def run_law_model_gof(
                 _vprint(f'Simulating matrix and GOF for {law} β = {beta:.2g} with {model}', verbose)
             else:
                 _vprint(f'Simulating matrix and GOF for {law} with {model}', verbose)
-            params = (data, pij, law, model, beta, repli, average, selected_measures)
+            params = (data, pij, law, model, beta, repli, eps, average, selected_measures)
             result = _process_exponent_gof(params)
             return result
         else:
             results = {}
             _vprint(f'Simulating matrix and GOF for {law} with {model} model ({repli} replications)', verbose)
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
-                params = (data, pij, law, model, beta, repli, average, selected_measures)
+                params = (data, pij, law, model, beta, repli, eps, average, selected_measures)
                 results[beta] = _process_exponent_gof(params)
             return results
         
@@ -459,6 +465,7 @@ def run_law_model(
     model: str = "UM",
     out_trips: Optional[np.ndarray] = None,
     in_trips: Optional[np.ndarray] = None,
+    eps: float = 1e-6,
     average: bool = False,
     repli: int = 1,
     processes: Optional[int] = None,
@@ -492,6 +499,8 @@ def run_law_model(
         Number of out-commuters $`O_i`$. Required for constrained models.
     in_trips : np.ndarray, optional
         Number of in-commuters $`D_j`$. Required for ACM and DCM models.
+    eps: float, default 1e-6
+        Strictly positive value used to replace any zero values in the marginals of the DCM
     average : bool, default False
         Whether the average mobility flow matrix should be generated instead of the `repli` matrices based on random draws.
     repli : int, default 1
@@ -561,7 +570,7 @@ def run_law_model(
             with mp.Pool(processes=num_processes_needed) as pool:
                 # Prepare parameters for the shared worker function
                 # Pass the dict of shared memory info instead of the raw data
-                params = [(shm_info, pij, law, model, beta, repli, return_proba, average) for beta in exponents]
+                params = [(shm_info, pij, law, model, beta, repli, return_proba, eps, average) for beta in exponents]
                 
                 results = list(tqdm(pool.imap(_process_exponent_shared, params),
                                       total=len(exponents), desc='Computing exponents', disable=not verbose))
@@ -593,7 +602,7 @@ def run_law_model(
                 _vprint(f'Simulating matrix for {law} β = {beta:.2g} with {model}', verbose)
             else:
                 _vprint(f'Simulating matrix for {law} with {model}', verbose)
-            params = (data, pij, law, model, beta, repli, return_proba, average)
+            params = (data, pij, law, model, beta, repli, return_proba, eps, average)
             result = _process_exponent(params) # Original function call
             if return_proba:
                 output[beta] = result
@@ -602,7 +611,7 @@ def run_law_model(
         else:
             _vprint(f'Simulating matrix for {law} with {model} model ({repli} replications)', verbose)
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
-                params = (data, pij, law, model, beta, repli, return_proba, average)
+                params = (data, pij, law, model, beta, repli, return_proba, eps, average)
                 result = _process_exponent(params) # Original function call
                 if return_proba:
                     output[beta] = result
@@ -732,6 +741,7 @@ def run_model(
     model: str = "UM",
     out_trips: Optional[np.ndarray] = None,
     in_trips: Optional[np.ndarray] = None,
+    eps: float = 1e-6,
     average: bool = False,
     repli: int = 1,
     processes: Optional[int] = None,
@@ -758,6 +768,8 @@ def run_model(
         Number of out-commuters $`O_i`$. Required for constrained models.
     in_trips : np.ndarray, optional
         Number of in-commuters $`D_j`$. Required for ACM and DCM models.
+    eps: float, default 1e-6
+        Strictly positive value used to replace any zero values in the marginals of the DCM
     average : bool, default False
         Whether the average mobility flow matrix should be generated instead of the `repli` matrices based on random draws.
     repli : int, default 1
@@ -820,7 +832,7 @@ def run_model(
             with mp.Pool(processes=num_processes_needed) as pool:
                 # Prepare parameters for the shared worker function
                 # Pass the dict of shared memory info instead of the raw data
-                params = [(shm_info, probabilities[beta], law, model, beta, repli, return_proba, average) for beta in exponents]
+                params = [(shm_info, probabilities[beta], law, model, beta, repli, return_proba, eps, average) for beta in exponents]
                 
                 results = list(tqdm(pool.imap(_process_exponent_shared, params),
                                       total=len(exponents), desc='Computing exponents', disable=not verbose))
@@ -846,13 +858,13 @@ def run_model(
         if single_exponent:
             beta = exponents[0]
             _vprint(f'Simulating matrix with {model}', verbose)
-            params = (data, probabilities[beta], law, model, beta, repli, return_proba, average)
+            params = (data, probabilities[beta], law, model, beta, repli, return_proba, eps, average)
             result = _process_exponent(params)
             output[beta] = result['simulations']
         else:
             _vprint(f'Simulating matrix with {model} model ({repli} replications)', verbose)
             for i, beta in enumerate(tqdm(exponents, desc='Computing exponents', disable=not verbose)):
-                params = (data, probabilities[beta], law, model, beta, repli, return_proba, average)
+                params = (data, probabilities[beta], law, model, beta, repli, return_proba, eps, average)
                 result = _process_exponent(params)
                 output[beta] = result['simulations']
     _vprint('Done\n', verbose)
@@ -1057,7 +1069,7 @@ def _process_exponent_shared(param):
     """
     Worker process for a single exponent that uses data from shared memory.
     """
-    shm_info, pij, law, model, beta, repli, return_proba, average = param
+    shm_info, pij, law, model, beta, repli, return_proba, eps, average = param
     attached_shms = []
     try:
         # Reconstruct all necessary arrays from shared memory metadata
@@ -1087,7 +1099,7 @@ def _process_exponent_shared(param):
             elif model == "ACM":
                 S = _ACM(pij, in_trips, average)
             elif model == "DCM":
-                S = _DCM(pij, out_trips, in_trips, 50, 0.01, average)
+                S = _DCM(pij, out_trips, in_trips, 50, 0.01, eps, average)
             simulations.append(S)
 
         simulations = np.array(simulations)
@@ -1108,7 +1120,7 @@ def _process_exponent_shared(param):
 
 def _process_exponent(params):
     """Process a single exponent value"""
-    data, pij, law, model, beta, repli, return_proba, average = params
+    data, pij, law, model, beta, repli, return_proba, eps, average = params
     n, mi, mj, Oi, Dj, dij, sij = data
     
     # Build the matrix pij according to the law
@@ -1131,7 +1143,7 @@ def _process_exponent(params):
         elif model == "ACM":  # Attraction constrained model
             S = _ACM(pij, Dj, average)
         elif model == "DCM":  # Doubly constrained model
-            S = _DCM(pij, Oi, Dj, 50, 0.01, average)
+            S = _DCM(pij, Oi, Dj, 50, 0.01, eps, average)
 
         simulations.append(S)
     
@@ -1149,7 +1161,7 @@ def _process_exponent(params):
 
 def _process_exponent_gof_shared(params):
     """Run simulations and process GOF calculation for a single exponent"""
-    shm_info, pij, law, model, beta, repli, average, measures = params
+    shm_info, pij, law, model, beta, repli, eps, average, measures = params
     attached_shms = []
     try:
         # Reconstruct all necessary arrays from shared memory metadata
@@ -1189,7 +1201,7 @@ def _process_exponent_gof_shared(params):
             elif model == "ACM":  # Attraction constrained model
                 S = _ACM(pij, Dj, average)
             elif model == "DCM":  # Doubly constrained model
-                S = _DCM(pij, Oi, Dj, 50, 0.01, average)
+                S = _DCM(pij, Oi, Dj, 50, 0.01, eps, average)
             result_dict = {"Replication": r}
             
             if "CPC" in measures:
@@ -1252,7 +1264,7 @@ def _process_exponent_gof_shared(params):
 
 def _process_exponent_gof(params):
     """Run simulations and process GOF calculation for a single exponent"""
-    data, pij, law, model, beta, repli, average, measures = params
+    data, pij, law, model, beta, repli, eps, average, measures = params
     mi, mj, dij, sij, Oi, Dj, Tij = data
     n = len(mi)
     
@@ -1282,7 +1294,7 @@ def _process_exponent_gof(params):
         elif model == "ACM":  # Attraction constrained model
             S = _ACM(pij, Dj, average)
         elif model == "DCM":  # Doubly constrained model
-            S = _DCM(pij, Oi, Dj, 50, 0.01, average)
+            S = _DCM(pij, Oi, Dj, 50, 0.01, eps, average)
         
         result_dict = {"Replication": r}
         
@@ -1515,7 +1527,7 @@ def _calculate_gof_shared(params):
             shm.close()
 
 def _single_metric_average(exponent, params):
-    law, model, measure, mi, mj, distance, opportunity, Oi, Dj, obs, average, repli, processes, verbose = params
+    law, model, measure, mi, mj, distance, opportunity, Oi, Dj, obs, eps, average, repli, processes, verbose = params
     _vprint(f'\nTrying β = {exponent}', verbose)
     if measure in ['CPC', 'CPL', 'CPCd']:
         sign = -1
@@ -1541,14 +1553,14 @@ def _single_metric_average(exponent, params):
         _vprint(f'Calculating average {measure} over {repli} realizations', verbose)
         _vprint(f'Using {num_processes_needed} parallel processes', verbose)
         with mp.Pool(processes=num_processes_needed) as pool:
-            params = [(model, measure, obs, pij, distance, Oi, Dj, average) for r in range(repli)]
+            params = [(model, measure, obs, pij, distance, Oi, Dj, eps, average) for r in range(repli)]
             results = list(tqdm(pool.imap(_single_metric, params), total=repli, desc='Computing GOF measure', disable=not verbose))		
             	
 
         return sign * np.mean(results)
     else:
 		# Sequential processing
-        params = [model, measure, obs, pij, distance, Oi, Dj, average]
+        params = [model, measure, obs, pij, distance, Oi, Dj, eps, average]
         if repli > 1:
             results = [_single_metric(params) for r in repli]
             return sign * np.mean(results)
@@ -1557,7 +1569,7 @@ def _single_metric_average(exponent, params):
             return sign * result
             
 def _single_metric(params):
-    model, measure, obs, pij, distance, out_trips, in_trips, average = params
+    model, measure, obs, pij, distance, out_trips, in_trips, eps, average = params
     n = obs.shape[0]
     
     #Simulated T_ij
@@ -1569,7 +1581,7 @@ def _single_metric(params):
     elif model == "ACM":
         S = _ACM(pij, in_trips, average)
     elif model == "DCM":
-        S = _DCM(pij, out_trips, in_trips, 50, 0.01, average)
+        S = _DCM(pij, out_trips, in_trips, 50, 0.01, eps, average)
 		
     #Calculate goodness-of-fit measure
     nb = np.sum(obs)
@@ -1759,16 +1771,16 @@ def _ACM(pij, Dj, average):
     return S
 
 
-def _DCM(pij, Oi, Dj, max_iter, closure, average):
+def _DCM(pij, Oi, Dj, max_iter, closure, eps, average):
     """Generate the network using the Doubly Constrained Model"""
     n = len(Oi)
     
     # Initialize marginals
     marg = np.zeros((n, 2))
-    marg[:, 0] = np.maximum(Oi, 0.01)
-    marg[:, 1] = np.maximum(Dj, 0.01)
+    marg[:, 0] = np.where(Oi !=0, Oi, eps)
+    marg[:, 1] = np.where(Dj !=0, Dj, eps)
     
-    weights = np.maximum(pij, 0.01)
+    weights = np.where(pij !=0, pij, eps)
     
     iter_count = 0
     crit_out = 1.0
