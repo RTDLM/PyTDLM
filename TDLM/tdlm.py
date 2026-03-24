@@ -1798,9 +1798,9 @@ def _DCM(pij, Oi, Dj, max_iter, closure, average):
         
         iter_count += 1
 
-    # Generate final matrix using UM
+    # Generate final matrix using PCM
     if not average:
-        S = _UM(weights, Oi, average)
+        S = _PCM(weights, Oi, average)
     else:
         S = weights
         
