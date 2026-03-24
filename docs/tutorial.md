@@ -39,14 +39,22 @@ $`j`$). The OD matrix is square, contains only positive values, and may have a
 zero diagonal (Figure 1).
 
 <figure markdown="span">
-  ![OD matrix](assets/OD.png){ : style="transform: scale(0.6);" }
+  ![OD matrix](assets/Fig1.png){ : style="transform: scale(0.6);" }
   <figcaption>Figure 1: Schematic representation of an Origin-Destination matrix.</figcaption>
+</figure>
+
+The goal is to generate a simulated OD matrix, $`\tilde{T}=(\tilde{T}_{ij})`$, 
+using only aggregated data while satisfying a set of constraints (Figure 2).
+
+<figure markdown="span">
+  ![Simulated OD matrix](assets/Fig2.png){ : style="transform: scale(0.6);" }
+  <figcaption>Figure 2: Illustration of a simulated Origin-Destination matrix.</figcaption>
 </figure>
 
 ## Aggregated inputs information
 
 Three categories of inputs are typically considered to simulate an OD matrix
-(Figure 2). The masses and distances are the primary ingredients used to
+(Figure 3). The masses and distances are the primary ingredients used to
 generate a matrix of probabilities based on a given distribution law. Thus, the
 probability $`p_{ij}`$ of observing a trip from location $`i`$ to location $`j`$
 depends on the masses, the demand at the origin ($`m_i`$), and the offer at
@@ -63,8 +71,8 @@ while preserving the total number of trips ($`N`$), the number of outgoing trips
 in the ["Constrained distribution models" section](https://rtdlm.github.io/PyTDLM/tutorial/#constrained-distribution-models)).
 
 <figure markdown="span">
-  ![Inputs information](assets/Inputs.png){ : style="transform: scale(0.75);" }
-  <figcaption>Figure 2: Schematic representation of the aggregated inputs information.</figcaption>
+  ![Inputs information](assets/Fig3.png){ : style="transform: scale(0.75);" }
+  <figcaption>Figure 3: Schematic representation of the aggregated inputs information.</figcaption>
 </figure>
 
 ## Trip distribution laws
@@ -75,11 +83,11 @@ location $`i`$ and location $`j`$. This probability is asymmetric in $`i`$ and $
 as are the flows themselves. It takes the form of a square matrix of probabilities.
 This probability is normalized across all possible pairs of origins and
 destinations, such that $`\sum_{i,j=1}^n p_{ij} = 1`$. Therefore, a matrix of
-probabilities can be obtained by normalizing any OD matrix (Figure 3).
+probabilities can be obtained by normalizing any OD matrix (Figure 4).
 
 <figure markdown="span">
-  ![Probability matrix](assets/Proba.png){ : style="transform: scale(0.60);" }
-  <figcaption>Figure 3: Schematic representation of the matrix of probabilities.</figcaption>
+  ![Probability matrix](assets/Fig4.png){ : style="transform: scale(0.60);" }
+  <figcaption>Figure 4: Schematic representation of the matrix of probabilities.</figcaption>
 </figure>
 
 As mentioned in the previous section, most trip distribution laws depend
@@ -92,11 +100,11 @@ function of the distance $`d_{ij}`$ between locations. In contrast to the gravit
 law, the laws of intervening opportunities hinge on the assumption that the
 number of opportunities $`s_{ij}`$ between locations plays a more important role
 than the distance ([Lenormand *et al.* (2016)](https://doi.org/10.1016/j.jtrangeo.2015.12.008)). This fundamental difference between the two
-schools of thought is illustrated in Figure 4.
+schools of thought is illustrated in Figure 5.
 
 <figure markdown="span">
-  ![Gravity vs IO](assets/GravVsOpp.png){ : style="transform: scale(0.50);" }
-  <figcaption>Figure 4: Illustration of the fundamental difference between gravity and 
+  ![Gravity vs IO](assets/Fig5.png){ : style="transform: scale(0.50);" }
+  <figcaption>Figure 5: Illustration of the fundamental difference between gravity and 
   intervening opportunity laws.</figcaption>
 </figure>
 
@@ -112,13 +120,13 @@ $`\tilde{T}=(\tilde{T}_{ij})`$ by
 drawing at random $`N`$ trips from the trip distribution law 
 $`(p_{ij})_{1 \leq i,j \leq n}`$ respecting different level of constraints 
 according to the model. We considered four different types of models in this
-package. As can be observed in Figure 5, the four models respect different level
+package. As can be observed in Figure 6, the four models respect different level
 of constraints from the total number of trips to the total number of out-going 
 and in-coming trips by locations (i.e. the margins).
 
 <figure markdown="span">
-  ![Constrained models](assets/Models.png){ : style="transform: scale(0.80);" }
-  <figcaption>Figure 5: Schematic representation of the constrained distribution models.</figcaption>
+  ![Constrained models](assets/Fig6.png){ : style="transform: scale(0.80);" }
+  <figcaption>Figure 6: Schematic representation of the constrained distribution models.</figcaption>
 </figure>
 
 More specifically, the volume of flows $`\tilde{T}_{ij}`$ is generated from the
@@ -183,7 +191,7 @@ simulated flow distance distributions.
 
 ### Data
 
-In this example, also provided as the [`basic_usage.py` script](https://github.com/RTDLM/PyTDLM/blob/main/examples/basic_usage.py), we will use data on commuting trips between United States counties in 2000 from the United State Census Bureau (data available online at https://www.census.gov/population/www/cen2000/commuting/index.html) to illustrate
+In this example, also provided as the [`basic_usage.py` script](https://github.com/RTDLM/PyTDLM/blob/main/examples/basic_usage.py), we will use data on commuting trips between United States counties in 2000 from the United State Census Bureau (data available online [here](https://www.census.gov/population/www/cen2000/commuting/index.html)) to illustrate
 the main functions of the package.
 
 The masses and margins are contained in the [`Inputs.csv` file](https://github.com/RTDLM/PyTDLM/blob/main/examples/data_US/Inputs.csv).
