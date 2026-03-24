@@ -1657,7 +1657,7 @@ def _proba(law, dij, sij, mi, mj, beta):
         W = numerator / denominator
     
     elif law == "Rand":
-        W = np.ones((n, n)) / (n**2 - n)
+        W = np.ones((n, n))
     
     np.fill_diagonal(W, 0)
     W[~np.isfinite(W)] = 0
