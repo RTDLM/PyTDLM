@@ -43,7 +43,7 @@ jobs:
         conda install matplotlib conda-build -y
         
         # Build the conda package
-        conda build . --output-folder conda-dist
+        conda-build . --output-folder conda-dist
         
         # Install the built package
         conda install -c ./conda-dist pytdlm -y
