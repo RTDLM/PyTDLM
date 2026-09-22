@@ -86,7 +86,7 @@ jobs:
     - name: Build conda package
       shell: bash -l {0}
       run: |
-        conda build . --output-folder conda-dist
+        conda-build . --output-folder conda-dist
     
     - name: Test conda package installation
       shell: bash -l {0}
